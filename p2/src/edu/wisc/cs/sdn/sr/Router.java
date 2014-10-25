@@ -316,18 +316,21 @@ public class Router
 		ICMP icmpReply = new ICMP();
 		icmpReply.setIcmpType((byte) 0);
 		icmpReply.setIcmpCode((byte) 0);
+		//icmpReply.serialize();
 		IPv4 ipReply = new IPv4();
 		ipReply.setPayload(icmpReply);
 		ipReply.setProtocol(IPv4.PROTOCOL_ICMP);
 		IPv4 ipRequest = (IPv4) etherPacket.getPayload();
 		ipReply.setSourceAddress(ipRequest.getDestinationAddress());
 		ipReply.setDestinationAddress(ipRequest.getSourceAddress());
-		ipReply.serialize();
+		//ipReply.serialize();
 		Ethernet ethReply = new Ethernet();
 		ethReply.setPayload(ipReply);
 		ethReply.setDestinationMACAddress(etherPacket.getSourceMACAddress());
 		ethReply.setSourceMACAddress(etherPacket.getDestinationMACAddress());
 		System.out.println("Echo reply sent...");
+		System.out.println(etherPacket.toString());
+		System.out.println(ethReply.toString());
 		sendPacket(ethReply, inIface);
 	}
 	
