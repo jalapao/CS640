@@ -1,5 +1,6 @@
 package edu.wisc.cs.sdn.sr;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -314,9 +315,11 @@ public class Router
 		return false;
 	}
 
-	private boolean checkChecksum(IPv4 packet){
+	private boolean checkChecksum(IPv4 packet) {
 		int accumulation = 0;
-		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize(), 0, packet.getHeaderLength());
+		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
+		System.out.println(byteBuffer.toString());
+		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
 		//byteBuffer.rewind();
 		for (int i = 0; i < packet.getHeaderLength() * 2; ++i) {
 			//byteBuffer.putShort(10, (short) 0);
