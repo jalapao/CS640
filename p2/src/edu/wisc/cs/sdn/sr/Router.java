@@ -1,6 +1,7 @@
 package edu.wisc.cs.sdn.sr;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -244,8 +245,8 @@ public class Router
 				if (checkIPChecksum(ipPacket)){
 					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
 					if (checkICMPChecksum(icmpPacket) && icmpPacket.getIcmpType() == (byte) 8) {
-						sendICMPReply(etherPacket, inIface);
 						// send icmp echo reply here
+						sendICMPReply(etherPacket, inIface);
 					} else {
 						return; // drop the packet
 					}
@@ -256,13 +257,14 @@ public class Router
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
 				UDP udpPacket = (UDP)ipPacket.getPayload();
+				//System.out.println("The UDP port is " + (short) udpPacket.getDestinationPort());
 				if (udpPacket.getDestinationPort() == 520) {
 					//call control plane
 				} else
-					sendICMPUnreachable();
+					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_TCP) {
-				sendICMPUnreachable();
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
 			} else
 				return;
 		} else { // not destined for one of the interfaces
@@ -270,35 +272,57 @@ public class Router
 				// simply drop this ip packet
 				return;
 			}
-			if (ipPacket.getTtl() <= 0) {
+			if (ipPacket.getTtl() == 0) {
 				// type 11 code 0
-				 sendICMPError();
+				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
 				 return;
 			}
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
+			System.out.println(routeEntry);
 			if (routeEntry == null){
-				sendICMPError();
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // unreachable net
 				return;
 			}
-			if (routeEntry.getGatewayAddress() == 0){
-				sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
+			System.out.println("Gateway is " + routeEntry.getGatewayAddress());
+			if (routeEntry.getGatewayAddress() == 0) {
+				System.out.println("I set source address to etherPachet : " + interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
+				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
+				
+				if (arpCache.lookup(ipPacket.getDestinationAddress()) == null) {
+					System.out.println("I don't have the mac address for " + ipPacket.getDestinationAddress());
+					System.out.println(interfaces.get(routeEntry.getInterface()));
+					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), ipPacket.getDestinationAddress());
+				} else {
+					System.out.println("Have mac address for " + ipPacket.getDestinationAddress());
+					System.out.println("Mac address = " + arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
+					etherPacket.setDestinationMACAddress(arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
+					System.out.println("Send ether packet!");
+					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
+				}
 			} else {
 				ArpEntry arpEntry = arpCache.lookup(routeEntry.getDestinationAddress());
 				if (arpEntry == null){
+					System.out.println("I don't have the mac address for " + ipPacket.getDestinationAddress());
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), routeEntry.getGatewayAddress());
 				} else {
+					System.out.println("Have mac address for " + ipPacket.getDestinationAddress());
+					System.out.println("Mac address = " + arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
 					etherPacket.setDestinationMACAddress(arpEntry.getMac().toString());
+					System.out.println("Send ether packet!");
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
 			}
 		}
 	}
 
+	// TODO
 	private RouteTableEntry findLongestPrefixMatch(int destIp){
 		RouteTableEntry bestfit = null;
 		for (RouteTableEntry rtEntry : this.getRouteTable().getEntries()){
-			int myAddress =  (byte)destIp & (byte)rtEntry.getMaskAddress();
+			int myAddress = destIp & rtEntry.getMaskAddress();
+			System.out.println("My address is " + myAddress);
+			System.out.println(rtEntry.getDestinationAddress());
 			if (myAddress == rtEntry.getDestinationAddress()){
 				if (bestfit == null)
 					bestfit = rtEntry;
@@ -309,6 +333,7 @@ public class Router
 		return bestfit;
 	}
 
+	// Done
 	private void sendICMPReply(Ethernet etherPacket, Iface inIface) {
 		Ethernet eth = etherPacket;
 		IPv4 ip = (IPv4) etherPacket.getPayload();
@@ -323,6 +348,7 @@ public class Router
 		int sourceAddress = ip.getDestinationAddress();
 		ip.setDestinationAddress(destinationAddress);
 		ip.setSourceAddress(sourceAddress);
+		
 		// TODO: if we should decrease TTL here?
 		eth.setPayload(ip);
 		byte[] destinationMACAddress = eth.getSourceMACAddress();
@@ -332,12 +358,37 @@ public class Router
 		sendPacket(eth, inIface);
 	}
 	
-	private boolean sendICMPError(){
-		return false;
-	}
-
-	private boolean sendICMPUnreachable(){
-		return false;
+	// TODO
+	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code){
+		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
+		
+		ICMP icmpPacket = new ICMP();
+//		ICMP icmpPacket = (ICMP) ipPacket.getPayload();
+		byte[] originData = ipPacket.getPayload().getPayload().serialize();
+		byte[] data = new byte[ipPacket.getHeaderLength() + 8];
+		byte[] dataByte = Arrays.copyOfRange(ipPacket.serialize(), 0, ipPacket.getHeaderLength());
+		System.arraycopy(dataByte, 0, data, 0, dataByte.length);
+		System.arraycopy(originData, 0, data, dataByte.length, 8);
+		icmpPacket.setPayload(new Data(data));
+		
+		icmpPacket.setIcmpCode((byte) code);
+		icmpPacket.setIcmpType((byte) type);
+		icmpPacket.setChecksum((short) 0);
+		
+		ipPacket.setPayload(icmpPacket);
+		ipPacket.setChecksum((short) 0);
+		int destinationAddress = ipPacket.getDestinationAddress();
+		int sourceAddress = ipPacket.getDestinationAddress();
+		ipPacket.setDestinationAddress(destinationAddress);
+		ipPacket.setSourceAddress(sourceAddress);
+		
+		etherPacket.setPayload(ipPacket);
+		byte[] destinationMACAddress = etherPacket.getSourceMACAddress();
+		byte[] sourceMACAddress = etherPacket.getDestinationMACAddress();
+		etherPacket.setDestinationMACAddress(destinationMACAddress);
+		etherPacket.setSourceMACAddress(sourceMACAddress);
+//		System.out.println(sendPacket(etherPacket, inIface));
+//		System.out.println("Unreachable message sent");
 	}
 
 	// done and tested
@@ -415,17 +466,28 @@ public class Router
 			{ break; }
 
 			// Update ARP cache with contents of ARP reply
+//			System.out.println("mac address of targert ip = " + arpCache.lookup(targetIp)); //arp
+			System.out.println("targetIp = " + targetIp);
+			System.out.println("sourceIp = " + Integer.valueOf(arpPacket.getSenderProtocolAddress().toString()));
+			System.out.println("target hardware address = " + new MACAddress(arpPacket.getTargetHardwareAddress()));
+			System.out.println("source hardware address = " + new MACAddress(arpPacket.getSenderHardwareAddress()));
+//			ArpRequest request = this.arpCache.insert(
+//					new MACAddress(arpPacket.getTargetHardwareAddress()),
+//					targetIp);
 			ArpRequest request = this.arpCache.insert(
-					new MACAddress(arpPacket.getTargetHardwareAddress()),
-					targetIp);
-
+					new MACAddress(arpPacket.getSenderHardwareAddress()),
+					Integer.valueOf(arpPacket.getSenderProtocolAddress().toString()));
 			// Process pending ARP request entry, if there is one
+			
 			if (request != null)
 			{				
+				System.out.println("I'm here...");
 				for (Ethernet packet : request.getWaitingPackets())
 				{
 					/*********************************************************/
 					/* TODO: send packet waiting on this request             */
+					System.out.println("The target MAC address is " + arpPacket.getTargetHardwareAddress());
+					packet.setSourceMACAddress(inIface.getMacAddress().toBytes());
 					packet.setDestinationMACAddress(arpPacket.getTargetHardwareAddress());
 					System.out.println("Process pending Arp Request:" + Boolean.toString(sendPacket(packet, inIface)));
 					/*********************************************************/
