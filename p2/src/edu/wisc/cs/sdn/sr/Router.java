@@ -1,19 +1,17 @@
 package edu.wisc.cs.sdn.sr;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
-import edu.wisc.cs.sdn.sr.vns.VNSComm;
-
 import net.floodlightcontroller.packet.ARP;
+import net.floodlightcontroller.packet.Data;
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.ICMP;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.UDP;
 import net.floodlightcontroller.util.MACAddress;
+import edu.wisc.cs.sdn.sr.vns.VNSComm;
 
 /**
  * @author Aaron Gember-Jacobson
@@ -240,19 +238,19 @@ public class Router
 //		System.out.println("handleIPv4Packet");
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		int destinationIP = ipPacket.getDestinationAddress();
-		if (destinationIP == inIface.getIpAddress()) {
+		if (destinationIP == inIface.getIpAddress()) { //?
 //			System.out.println("Destinated.");
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
-				System.out.println("Ping a!");
+//				System.out.println("Ping a!");
 				if (checkIPChecksum(ipPacket)){
 					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
-					if (checkICMPChecksum(icmpPacket)) {
+					if (checkICMPChecksum(icmpPacket) && icmpPacket.getIcmpType() == (byte) 8) {
 						sendICMPReply(etherPacket, inIface);
 						// send icmp echo reply here
 					} else {
 						return; // drop the packet
 					}
-					System.out.println("Ping after checksum!");
+//					System.out.println("Ping after checksum!");
 				} else
 					return; // drop the packet
 			}
@@ -313,23 +311,30 @@ public class Router
 	}
 
 	private void sendICMPReply(Ethernet etherPacket, Iface inIface){
+		
+		IPv4 ipRequest = (IPv4) etherPacket.getPayload();
+		ICMP icmpRequest = (ICMP) ipRequest.getPayload();
 		ICMP icmpReply = new ICMP();
 		icmpReply.setIcmpType((byte) 0);
 		icmpReply.setIcmpCode((byte) 0);
-		//icmpReply.serialize();
+		icmpReply.setPayload(icmpRequest.getPayload());
+		icmpReply.setChecksum((short) 0);
+		icmpReply.serialize();
+		
 		IPv4 ipReply = new IPv4();
 		ipReply.setPayload(icmpReply);
 		ipReply.setProtocol(IPv4.PROTOCOL_ICMP);
-		IPv4 ipRequest = (IPv4) etherPacket.getPayload();
-		ipReply.setSourceAddress(ipRequest.getDestinationAddress());
+		ipReply.setTtl((byte) 64);
+		ipReply.setSourceAddress(inIface.getIpAddress());
 		ipReply.setDestinationAddress(ipRequest.getSourceAddress());
-		//ipReply.serialize();
+		ipReply.setChecksum((short) 0);
+		ipReply.serialize();
+		
 		Ethernet ethReply = new Ethernet();
 		ethReply.setPayload(ipReply);
 		ethReply.setDestinationMACAddress(etherPacket.getSourceMACAddress());
-		ethReply.setSourceMACAddress(etherPacket.getDestinationMACAddress());
+		ethReply.setSourceMACAddress(inIface.getMacAddress().toBytes());
 		System.out.println("Echo reply sent...");
-		System.out.println(etherPacket.toString());
 		System.out.println(ethReply.toString());
 		sendPacket(ethReply, inIface);
 	}
@@ -429,7 +434,7 @@ public class Router
 					/*********************************************************/
 					/* TODO: send packet waiting on this request             */
 					packet.setDestinationMACAddress(arpPacket.getTargetHardwareAddress());
-					sendPacket(packet, inIface);
+					System.out.println("Process pending Arp Request:" + Boolean.toString(sendPacket(packet, inIface)));
 					/*********************************************************/
 				}
 			}
