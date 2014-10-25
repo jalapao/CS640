@@ -244,33 +244,34 @@ public class Router
 			System.out.println("Destinated.");
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				System.out.println("Ping a!");
-				if(checkChecksum(ipPacket)){
+				if (checkChecksum(ipPacket)){
+					// send icmp echo reply here
 					System.out.println("Ping after checksum!");
-				}
-				else
-					return;
+				} else
+					return; // drop the packet
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
 				UDP udpPacket = (UDP) ipPacket.getPayload();
 				if (udpPacket.getDestinationPort() == 520) {
 					//call control plane
-				}
-				else
+				} else
 					sendICMPUnreachable();
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_TCP) {
 				sendICMPUnreachable();
-			}
-			else
+			} else
 				return;
-		}
-		else{
+		} else { // not destined for one of the interfaces
 			if (!checkChecksum(ipPacket)) {
 				sendICMPError();
 				return;
 			}
-			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1)); //problem potential
+			if (ipPacket.getTtl() <= 0) {
+				 sendICMPError();
+				 return;
+			}
+			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null){
 				sendICMPError();
@@ -278,22 +279,19 @@ public class Router
 			}
 			if (routeEntry.getGatewayAddress() == 0){
 				sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
-			}else{
+			} else {
 				ArpEntry arpEntry = arpCache.lookup(routeEntry.getDestinationAddress());
 				if (arpEntry == null){
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), routeEntry.getGatewayAddress());
-				}else{
+				} else {
 					etherPacket.setDestinationMACAddress(arpEntry.getMac().toString());
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
 			}
-
 		}
-
 	}
 
 	private RouteTableEntry findLongestPrefixMatch(int destIp){
-
 		RouteTableEntry bestfit = null;
 		for (RouteTableEntry rtEntry : this.getRouteTable().getEntries()){
 			int myAddress =  (byte)destIp & (byte)rtEntry.getMaskAddress();
@@ -318,11 +316,8 @@ public class Router
 	private boolean checkChecksum(IPv4 packet) {
 		int accumulation = 0;
 		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
-		System.out.println(byteBuffer.toString());
 		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
-		//byteBuffer.rewind();
 		for (int i = 0; i < packet.getHeaderLength() * 2; ++i) {
-			//byteBuffer.putShort(10, (short) 0);
 			accumulation += 0xffff & byteBuffer.getShort();
 		}
 		accumulation = ((accumulation >> 16) & 0xffff)
