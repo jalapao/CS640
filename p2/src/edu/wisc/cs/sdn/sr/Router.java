@@ -239,7 +239,6 @@ public class Router
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		int destinationIP = ipPacket.getDestinationAddress();
 		if (destinationIP == inIface.getIpAddress()) { //?
-//			System.out.println("Destinated.");
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 //				System.out.println("Ping a!");
 				if (checkIPChecksum(ipPacket)){
@@ -310,33 +309,27 @@ public class Router
 		return bestfit;
 	}
 
-	private void sendICMPReply(Ethernet etherPacket, Iface inIface){
+	private void sendICMPReply(Ethernet etherPacket, Iface inIface) {
+		Ethernet eth = etherPacket;
+		IPv4 ip = (IPv4) etherPacket.getPayload();
+		ICMP icmp = (ICMP) ip.getPayload();
+		icmp.setIcmpCode((byte) 0);
+		icmp.setIcmpType((byte) 0);
+		icmp.setChecksum((short) 0);
 		
-		IPv4 ipRequest = (IPv4) etherPacket.getPayload();
-		ICMP icmpRequest = (ICMP) ipRequest.getPayload();
-		ICMP icmpReply = new ICMP();
-		icmpReply.setIcmpType((byte) 0);
-		icmpReply.setIcmpCode((byte) 0);
-		icmpReply.setPayload(icmpRequest.getPayload());
-		icmpReply.setChecksum((short) 0);
-		icmpReply.serialize();
-		
-		IPv4 ipReply = new IPv4();
-		ipReply.setPayload(icmpReply);
-		ipReply.setProtocol(IPv4.PROTOCOL_ICMP);
-		ipReply.setTtl((byte) 64);
-		ipReply.setSourceAddress(inIface.getIpAddress());
-		ipReply.setDestinationAddress(ipRequest.getSourceAddress());
-		ipReply.setChecksum((short) 0);
-		ipReply.serialize();
-		
-		Ethernet ethReply = new Ethernet();
-		ethReply.setPayload(ipReply);
-		ethReply.setDestinationMACAddress(etherPacket.getSourceMACAddress());
-		ethReply.setSourceMACAddress(inIface.getMacAddress().toBytes());
-		System.out.println("Echo reply sent...");
-		System.out.println(ethReply.toString());
-		sendPacket(ethReply, inIface);
+		ip.setPayload(icmp);
+		ip.setChecksum((short) 0);
+		int destinationAddress = ip.getSourceAddress();
+		int sourceAddress = ip.getDestinationAddress();
+		ip.setDestinationAddress(destinationAddress);
+		ip.setSourceAddress(sourceAddress);
+		// TODO: if we should decrease TTL here?
+		eth.setPayload(ip);
+		byte[] destinationMACAddress = eth.getSourceMACAddress();
+		byte[] sourceMACAddress = eth.getDestinationMACAddress();
+		eth.setDestinationMACAddress(destinationMACAddress);
+		eth.setSourceMACAddress(sourceMACAddress);
+		sendPacket(eth, inIface);
 	}
 	
 	private boolean sendICMPError(){
@@ -403,7 +396,7 @@ public class Router
 		// Make sure it's an ARP packet
 		if (etherPacket.getEtherType() != Ethernet.TYPE_ARP)
 		{ return; }
-
+		
 		// Get ARP header
 		ARP arpPacket = (ARP)etherPacket.getPayload();
 		int targetIp = ByteBuffer.wrap(
