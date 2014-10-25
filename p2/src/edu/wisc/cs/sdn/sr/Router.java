@@ -245,14 +245,21 @@ public class Router
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				System.out.println("Ping a!");
 				if (checkChecksum(ipPacket)){
-					// send icmp echo reply here
+					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
+					// check icmp checksum
+					short tmpChecksum = 0;
+					if (tmpChecksum == icmpPacket.getChecksum()) {
+						// send icmp echo reply here
+					} else {
+						return; // drop the packet
+					}
 					System.out.println("Ping after checksum!");
 				} else
 					return; // drop the packet
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
-				UDP udpPacket = (UDP) ipPacket.getPayload();
+				UDP udpPacket = (UDP)ipPacket.getPayload();
 				if (udpPacket.getDestinationPort() == 520) {
 					//call control plane
 				} else
