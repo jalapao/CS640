@@ -237,16 +237,17 @@ public class Router
 	private void handleIPv4Packet(Ethernet etherPacket, Iface inIface){
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
-		System.out.println("handleIPv4Packet");
+//		System.out.println("handleIPv4Packet");
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		int destinationIP = ipPacket.getDestinationAddress();
 		if (destinationIP == inIface.getIpAddress()) {
-			System.out.println("Destinated.");
+//			System.out.println("Destinated.");
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				System.out.println("Ping a!");
 				if (checkIPChecksum(ipPacket)){
 					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
 					if (checkICMPChecksum(icmpPacket)) {
+						sendICMPReply(etherPacket, inIface);
 						// send icmp echo reply here
 					} else {
 						return; // drop the packet
@@ -269,10 +270,11 @@ public class Router
 				return;
 		} else { // not destined for one of the interfaces
 			if (!checkIPChecksum(ipPacket)) {
-				sendICMPError();
+				// simply drop this ip packet
 				return;
 			}
 			if (ipPacket.getTtl() <= 0) {
+				// type 11 code 0
 				 sendICMPError();
 				 return;
 			}
@@ -303,13 +305,31 @@ public class Router
 			if (myAddress == rtEntry.getDestinationAddress()){
 				if (bestfit == null)
 					bestfit = rtEntry;
-				else if( bestfit.getMaskAddress() < rtEntry.getMaskAddress() )
+				else if(bestfit.getMaskAddress() < rtEntry.getMaskAddress() )
 					bestfit = rtEntry;
 			}
 		}
 		return bestfit;
 	}
 
+	private void sendICMPReply(Ethernet etherPacket, Iface inIface){
+		ICMP icmpReply = new ICMP();
+		icmpReply.setIcmpType((byte) 0);
+		icmpReply.setIcmpCode((byte) 0);
+		IPv4 ipReply = new IPv4();
+		ipReply.setPayload(icmpReply);
+		ipReply.setProtocol(IPv4.PROTOCOL_ICMP);
+		IPv4 ipRequest = (IPv4) etherPacket.getPayload();
+		ipReply.setSourceAddress(ipRequest.getDestinationAddress());
+		ipReply.setDestinationAddress(ipRequest.getSourceAddress());
+		ipReply.serialize();
+		Ethernet ethReply = new Ethernet();
+		ethReply.setPayload(ipReply);
+		ethReply.setDestinationMACAddress(etherPacket.getSourceMACAddress());
+		ethReply.setSourceMACAddress(etherPacket.getDestinationMACAddress());
+		sendPacket(ethReply, inIface);
+	}
+	
 	private boolean sendICMPError(){
 		return false;
 	}
@@ -318,6 +338,7 @@ public class Router
 		return false;
 	}
 
+	// done and tested
 	private boolean checkIPChecksum(IPv4 packet) {
 		int accumulation = 0;
 		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
@@ -336,6 +357,7 @@ public class Router
 			return false;
 	}
 
+	// done and tested
 	private boolean checkICMPChecksum(ICMP packet) {
 		ByteBuffer bb = ByteBuffer.wrap(packet.serialize());
 		bb.putShort(2, (short) 0);
@@ -353,14 +375,15 @@ public class Router
         accumulation = ((accumulation >> 16) & 0xffff)
                 + (accumulation & 0xffff);
         short tmpChecksum = (short) (~accumulation & 0xffff);
-        System.out.println("The tmpChecksum is " + tmpChecksum);
-        System.out.println("Should be " + packet.getChecksum());
+//        System.out.println("The tmpChecksum is " + tmpChecksum);
+//        System.out.println("Should be " + packet.getChecksum());
         if (tmpChecksum == packet.getChecksum()) {
         	return true;
         } else {
         	return false;
         }
 	}
+	
 	/**
 	 * Handle an ARP packet received on a specific interface.
 	 * @param etherPacket the complete ARP packet that was received
