@@ -327,6 +327,7 @@ public class Router
 		ethReply.setPayload(ipReply);
 		ethReply.setDestinationMACAddress(etherPacket.getSourceMACAddress());
 		ethReply.setSourceMACAddress(etherPacket.getDestinationMACAddress());
+		System.out.println("Echo reply sent...");
 		sendPacket(ethReply, inIface);
 	}
 	
