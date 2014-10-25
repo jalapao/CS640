@@ -244,11 +244,9 @@ public class Router
 			System.out.println("Destinated.");
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				System.out.println("Ping a!");
-				if (checkChecksum(ipPacket)){
+				if (checkIPChecksum(ipPacket)){
 					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
-					// check icmp checksum
-					short tmpChecksum = 0;
-					if (tmpChecksum == icmpPacket.getChecksum()) {
+					if (checkICMPChecksum(icmpPacket)) {
 						// send icmp echo reply here
 					} else {
 						return; // drop the packet
@@ -270,7 +268,7 @@ public class Router
 			} else
 				return;
 		} else { // not destined for one of the interfaces
-			if (!checkChecksum(ipPacket)) {
+			if (!checkIPChecksum(ipPacket)) {
 				sendICMPError();
 				return;
 			}
@@ -320,7 +318,7 @@ public class Router
 		return false;
 	}
 
-	private boolean checkChecksum(IPv4 packet) {
+	private boolean checkIPChecksum(IPv4 packet) {
 		int accumulation = 0;
 		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
 		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
@@ -330,14 +328,39 @@ public class Router
 		accumulation = ((accumulation >> 16) & 0xffff)
 		+ (accumulation & 0xffff);
 		short checksum = (short) (~accumulation & 0xffff);
-		System.out.println(checksum);
-		System.out.println(packet.getChecksum());
+//		System.out.println(checksum);
+//		System.out.println(packet.getChecksum());
 		if (checksum == packet.getChecksum())
 			return true;
 		else
 			return false;
 	}
 
+	private boolean checkICMPChecksum(ICMP packet) {
+		ByteBuffer bb = ByteBuffer.wrap(packet.serialize());
+		bb.putShort(2, (short) 0);
+		
+		int accumulation = 0;
+		int length = packet.serialize().length;
+        for (int i = 0; i < length / 2; ++i) {
+            accumulation += 0xffff & bb.getShort();
+        }
+        // pad to an even number of shorts
+        if (length % 2 > 0) {
+            accumulation += (bb.get() & 0xff) << 8;
+        }
+
+        accumulation = ((accumulation >> 16) & 0xffff)
+                + (accumulation & 0xffff);
+        short tmpChecksum = (short) (~accumulation & 0xffff);
+        System.out.println("The tmpChecksum is " + tmpChecksum);
+        System.out.println("Should be " + packet.getChecksum());
+        if (tmpChecksum == packet.getChecksum()) {
+        	return true;
+        } else {
+        	return false;
+        }
+	}
 	/**
 	 * Handle an ARP packet received on a specific interface.
 	 * @param etherPacket the complete ARP packet that was received
