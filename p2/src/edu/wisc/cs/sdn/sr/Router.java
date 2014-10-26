@@ -249,6 +249,7 @@ public class Router
 				break;
 			}
 		}
+		
 		if (thisIsMyIP) { //?
 			// Check if timeout
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
@@ -264,7 +265,7 @@ public class Router
 				//check 520
 				UDP udpPacket = (UDP)ipPacket.getPayload();		
 				if (udpPacket.getDestinationPort() == 520) {
-					//call control plan here
+					rip.handlePacket(etherPacket, inIface);
 				} else
 					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
 			}

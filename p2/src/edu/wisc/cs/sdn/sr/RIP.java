@@ -53,7 +53,7 @@ public class RIP implements Runnable
 
         /*********************************************************************/
         /* TODO: Add other initialization code as necessary                  */
-		for(Iface iface : router.getInterfaces().values()){
+		for (Iface iface : router.getInterfaces().values()){
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_REQUEST);
 			sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
@@ -81,8 +81,10 @@ public class RIP implements Runnable
 		etherPacket.setSourceMACAddress(iface.getMacAddress().toBytes());
 		etherPacket.setDestinationMACAddress(destMacAddress);
 		System.out.println("sending rip packet: " + etherPacket.toString());
+		System.out.println("------------------------");
 		return router.sendPacket(etherPacket, iface);
 	}
+	
 
     /**
       * Handle a RIP packet received by the router.
@@ -104,7 +106,9 @@ public class RIP implements Runnable
 
         /*********************************************************************/
         /* TODO: Handle RIP packet                                           */
-
+		System.out.println("received packet:\n" + etherPacket.toString());
+		System.out.println("ripPacket print:\n" + ripPacket.toString());
+		System.out.println("------------------------");
         /*********************************************************************/
 	}
     
@@ -116,7 +120,17 @@ public class RIP implements Runnable
     {
         /*********************************************************************/
         /* TODO: Send period updates and time out route table entries        */
-
+		for (Iface iface : router.getInterfaces().values()){
+			RIPv2 ripv2 = new RIPv2();
+			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
+			sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
+		}
+		
+		try {
+			Thread.sleep(UPDATE_INTERVAL * 1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
         /*********************************************************************/
 	}
 }
