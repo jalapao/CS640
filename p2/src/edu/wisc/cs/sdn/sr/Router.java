@@ -237,8 +237,11 @@ public class Router
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
-		System.out.println("TTL is " + ipPacket.getTtl());
 		int destinationIP = ipPacket.getDestinationAddress();
+		
+		if (!checkIPChecksum(ipPacket))
+			return;
+		
 		boolean thisIsMyIP = false;
 		for (Iface i : interfaces.values()) {
 			if (i.getIpAddress() == destinationIP) {
@@ -248,28 +251,20 @@ public class Router
 		}
 		if (thisIsMyIP) { //?
 			// Check if timeout
-			if (ipPacket.getTtl() <= 1) {
-				// type 11 code 0
-				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-				return;
-			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
-				if (checkIPChecksum(ipPacket)){
-					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
-					if (checkICMPChecksum(icmpPacket) && icmpPacket.getIcmpType() == (byte) 8) {
-						// send icmp echo reply here
-						sendICMPReply(etherPacket, inIface);
-					} else {
-						return; // drop the packet
-					}
-				} else
-					return; // drop the packet
+				ICMP icmpPacket = (ICMP)ipPacket.getPayload();
+				if (checkICMPChecksum(icmpPacket) && icmpPacket.getIcmpType() == (byte) 8) {
+					// send icmp echo reply here
+					sendICMPReply(etherPacket, inIface);
+				} else {
+					return; // drop the packet if ICMP chekcsum is wrong
+				}
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
 				UDP udpPacket = (UDP)ipPacket.getPayload();		
 				if (udpPacket.getDestinationPort() == 520) {
-					//call control plan
+					//call control plan here
 				} else
 					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
 			}
@@ -278,24 +273,23 @@ public class Router
 			} else
 				return;
 		} else { // not destined for one of the interfaces
-			if (!checkIPChecksum(ipPacket)) {
-				// simply drop this ip packet
-				return;
-			}
-			if (ipPacket.getTtl() <= 1) {
+			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
+			System.out.println("TTL is " + ipPacket.getTtl());
+			ipPacket.setChecksum((short) 0);
+			etherPacket.setPayload(ipPacket);
+			
+			if (ipPacket.getTtl() <= 0) {
 				// type 11 code 0
 				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
 				return;
 			}
+			
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null){
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // unreachable net
 				return;
 			}
 			//forward message procedures:
-			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
-			ipPacket.setChecksum((short) 0);
-			etherPacket.setPayload(ipPacket);
 			if (routeEntry.getGatewayAddress() == 0) {
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				
@@ -344,6 +338,7 @@ public class Router
 		
 		ip.setPayload(icmp);
 		ip.setChecksum((short) 0);
+		ip.setTtl((byte) 64);
 		int destinationAddress = ip.getSourceAddress();
 		int sourceAddress = ip.getDestinationAddress();
 		ip.setDestinationAddress(destinationAddress);
@@ -360,15 +355,8 @@ public class Router
 	
 	// TODO
 	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code){
-		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
-//		ipPacket.setTtl((byte)(ipPacket.getTtl()-1));
-//		ipPacket.setChecksum((short)0);
-//		short newChecksum = calcIPChecksum(ipPacket);
-//		ipPacket.setChecksum(newChecksum);
-		
-		
+		IPv4 ipPacket = (IPv4) etherPacket.getPayload();		
 		ICMP icmpPacket = new ICMP();
-//		ICMP icmpPacket = (ICMP) ipPacket.getPayload();
 		byte[] originData = ipPacket.getPayload().getPayload().serialize();
 		byte[] data = new byte[ipPacket.getHeaderLength() + 8];
 		byte[] dataByte = Arrays.copyOfRange(ipPacket.serialize(), 0, ipPacket.getHeaderLength());
@@ -382,6 +370,7 @@ public class Router
 		
 		ipPacket.setPayload(icmpPacket);
 		ipPacket.setChecksum((short) 0);
+		ipPacket.setTtl((byte) 64);
 		int destinationAddress = ipPacket.getDestinationAddress();
 		int sourceAddress = ipPacket.getDestinationAddress();
 		ipPacket.setDestinationAddress(destinationAddress);

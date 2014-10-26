@@ -53,30 +53,34 @@ public class RIP implements Runnable
 
         /*********************************************************************/
         /* TODO: Add other initialization code as necessary                  */
-		for(Iface i : router.getInterfaces().values()){
+		for(Iface iface : router.getInterfaces().values()){
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_REQUEST);
-			sendRIPPacket(ripv2, i);
-			
+			sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
 		}
         /*********************************************************************/
 	}
 	
-	public boolean sendRIPPacket(RIPv2 ripv2, Iface iface){
+	public boolean sendRIPPacket(RIPv2 ripv2, Iface iface, int destIPAddress, byte[] destMacAddress ){
 		UDP udpPacket = new UDP();
 		udpPacket.setPayload(ripv2);
 		udpPacket.setSourcePort(UDP.RIP_PORT);
 		udpPacket.setDestinationPort(UDP.RIP_PORT);
 		udpPacket.setChecksum((short) 0);
 		
-		IPv4 ipPacket = new IPv4();
+		IPv4 ipPacket = new IPv4(); //version = 4, isTruncated = false
 		ipPacket.setPayload(udpPacket);
 		ipPacket.setChecksum((short) 0);
-//		ipPacket.set
+		ipPacket.setSourceAddress(iface.getIpAddress());
+		ipPacket.setDestinationAddress(destIPAddress);
+		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
+		ipPacket.setTtl((byte) 64);
 		
 		Ethernet etherPacket = new Ethernet();
 		etherPacket.setPayload(ipPacket);
-		
+		etherPacket.setSourceMACAddress(iface.getMacAddress().toBytes());
+		etherPacket.setDestinationMACAddress(destMacAddress);
+		System.out.println("sending rip packet: " + etherPacket.toString());
 		return router.sendPacket(etherPacket, iface);
 	}
 
