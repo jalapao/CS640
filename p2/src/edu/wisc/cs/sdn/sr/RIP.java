@@ -53,8 +53,31 @@ public class RIP implements Runnable
 
         /*********************************************************************/
         /* TODO: Add other initialization code as necessary                  */
-
+		for(Iface i : router.getInterfaces().values()){
+			RIPv2 ripv2 = new RIPv2();
+			ripv2.setCommand(RIPv2.COMMAND_REQUEST);
+			sendRIPPacket(ripv2, i);
+			
+		}
         /*********************************************************************/
+	}
+	
+	public boolean sendRIPPacket(RIPv2 ripv2, Iface iface){
+		UDP udpPacket = new UDP();
+		udpPacket.setPayload(ripv2);
+		udpPacket.setSourcePort(UDP.RIP_PORT);
+		udpPacket.setDestinationPort(UDP.RIP_PORT);
+		udpPacket.setChecksum((short) 0);
+		
+		IPv4 ipPacket = new IPv4();
+		ipPacket.setPayload(udpPacket);
+		ipPacket.setChecksum((short) 0);
+//		ipPacket.set
+		
+		Ethernet etherPacket = new Ethernet();
+		etherPacket.setPayload(ipPacket);
+		
+		return router.sendPacket(etherPacket, iface);
 	}
 
     /**

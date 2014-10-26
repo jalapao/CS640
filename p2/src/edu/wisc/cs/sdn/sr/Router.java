@@ -236,11 +236,23 @@ public class Router
 	private void handleIPv4Packet(Ethernet etherPacket, Iface inIface){
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
-		System.out.println("handleIPv4Packet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
+		System.out.println("TTL is " + ipPacket.getTtl());
 		int destinationIP = ipPacket.getDestinationAddress();
-		System.out.println("source IP = " + ipPacket.getSourceAddress() + "  |  destination ip = " + destinationIP);
-		if (destinationIP == inIface.getIpAddress()) { //?
+		boolean thisIsMyIP = false;
+		for (Iface i : interfaces.values()) {
+			if (i.getIpAddress() == destinationIP) {
+				thisIsMyIP = true;
+				break;
+			}
+		}
+		if (thisIsMyIP) { //?
+			// Check if timeout
+			if (ipPacket.getTtl() <= 1) {
+				// type 11 code 0
+				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+				return;
+			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				if (checkIPChecksum(ipPacket)){
 					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
@@ -255,9 +267,9 @@ public class Router
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
-				UDP udpPacket = (UDP)ipPacket.getPayload();
+				UDP udpPacket = (UDP)ipPacket.getPayload();		
 				if (udpPacket.getDestinationPort() == 520) {
-					//call control plane
+					//call control plan
 				} else
 					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
 			}
@@ -270,30 +282,27 @@ public class Router
 				// simply drop this ip packet
 				return;
 			}
-			if (ipPacket.getTtl() == 0) {
+			if (ipPacket.getTtl() <= 1) {
 				// type 11 code 0
 				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-				 return;
+				return;
 			}
-			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
-			ipPacket.setChecksum((short) 0);
-			etherPacket.setPayload(ipPacket);
-			
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null){
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // unreachable net
 				return;
 			}
-//			System.out.println("Gateway is " + routeEntry.getGatewayAddress());
+			//forward message procedures:
+			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
+			ipPacket.setChecksum((short) 0);
+			etherPacket.setPayload(ipPacket);
 			if (routeEntry.getGatewayAddress() == 0) {
-//				System.out.println("I set source address to etherPachet : " + interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				
 				if (arpCache.lookup(ipPacket.getDestinationAddress()) == null) {
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), ipPacket.getDestinationAddress());
 				} else {
 					etherPacket.setDestinationMACAddress(arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
-					System.out.println("Send ether packet!!!!!!!!!!!!!!!!!!!! Gateway is 0!!!!!!!!!!!!!!");
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
 			} else {
@@ -303,7 +312,6 @@ public class Router
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), inIface.getIpAddress());
 				} else {
 					etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
-					System.out.println("Send ether packet!!!!!!!!!!!!!!!!!!!!!! Gateway is not 0!!!!!!!!!!!");
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
 			}
@@ -353,6 +361,11 @@ public class Router
 	// TODO
 	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code){
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
+//		ipPacket.setTtl((byte)(ipPacket.getTtl()-1));
+//		ipPacket.setChecksum((short)0);
+//		short newChecksum = calcIPChecksum(ipPacket);
+//		ipPacket.setChecksum(newChecksum);
+		
 		
 		ICMP icmpPacket = new ICMP();
 //		ICMP icmpPacket = (ICMP) ipPacket.getPayload();
@@ -379,8 +392,7 @@ public class Router
 		byte[] sourceMACAddress = etherPacket.getDestinationMACAddress();
 		etherPacket.setDestinationMACAddress(destinationMACAddress);
 		etherPacket.setSourceMACAddress(sourceMACAddress);
-//		System.out.println(sendPacket(etherPacket, inIface));
-//		System.out.println("Unreachable message sent");
+		System.out.println("Error message sent " + type + " " + code);
 	}
 
 	// done and tested
@@ -394,12 +406,23 @@ public class Router
 		accumulation = ((accumulation >> 16) & 0xffff)
 		+ (accumulation & 0xffff);
 		short checksum = (short) (~accumulation & 0xffff);
-//		System.out.println(checksum);
-//		System.out.println(packet.getChecksum());
 		if (checksum == packet.getChecksum())
 			return true;
 		else
 			return false;
+	}
+	
+	private short calcIPChecksum(IPv4 packet) {
+		int accumulation = 0;
+		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
+		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
+		for (int i = 0; i < packet.getHeaderLength() * 2; ++i) {
+			accumulation += 0xffff & byteBuffer.getShort();
+		}
+		accumulation = ((accumulation >> 16) & 0xffff)
+		+ (accumulation & 0xffff);
+		short checksum = (short) (~accumulation & 0xffff);
+		return checksum;
 	}
 
 	// done and tested
@@ -465,15 +488,14 @@ public class Router
 			// Process pending ARP request entry, if there is one
 			if (request != null)
 			{				
-				System.out.println("I'm here...");
 				for (Ethernet packet : request.getWaitingPackets())
 				{
 					/*********************************************************/
 					/* TODO: send packet waiting on this request             */
 					packet.setSourceMACAddress(inIface.getMacAddress().toBytes());
 					packet.setDestinationMACAddress(arpPacket.getSenderHardwareAddress());
-					System.out.println("Hahaha! " + packet);
-					System.out.println("Process pending Arp Request:" + Boolean.toString(sendPacket(packet, inIface)));
+					
+					System.out.println("Send pending ARP Request:" + Boolean.toString(sendPacket(packet, inIface)));
 					/*********************************************************/
 				}
 			}

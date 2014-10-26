@@ -91,6 +91,7 @@ public class ArpCache implements Runnable
 			/*********************************************************/
 		    /* TODO: send ICMP host unreachable to the source        */ 
 		    /* address of all packets waiting on this request        */
+			System.out.println("We have got a timeout ARP request!!!!!!");
 			if((request.getWaitingPackets() != null) && (request.getWaitingPackets().size() > 0)){
 				for (Ethernet waiting : request.getWaitingPackets()) {
 					router.sendICMPError(waiting, request.getIface(), (byte) 3, (byte) 1);
@@ -106,6 +107,7 @@ public class ArpCache implements Runnable
 			// Send ARP request packet
 			this.sendArpRequest(request);
 			request.incrementSent();
+			System.out.println("Send another request! " + request.getSentCount());
 		}
 	}
 	
