@@ -91,15 +91,12 @@ public class ArpCache implements Runnable
 			/*********************************************************/
 		    /* TODO: send ICMP host unreachable to the source        */ 
 		    /* address of all packets waiting on this request        */
-			System.out.println("We have got a timeout ARP request!!!!!!");
 			if((request.getWaitingPackets() != null) && (request.getWaitingPackets().size() > 0)){
 				for (Ethernet waiting : request.getWaitingPackets()) {
 					router.sendICMPError(waiting, request.getIface(), (byte) 3, (byte) 1);
-					System.out.println("request.interface = " + request.getIface());
 				}
 			}
 		    /*********************************************************/
-//			System.out.println();
 			this.requests.remove(request.getIpAddress());
 		}
 		else
@@ -107,7 +104,6 @@ public class ArpCache implements Runnable
 			// Send ARP request packet
 			this.sendArpRequest(request);
 			request.incrementSent();
-			System.out.println("Send another request! " + request.getSentCount());
 		}
 	}
 	
@@ -145,7 +141,6 @@ public class ArpCache implements Runnable
 		ArpRequest request = this.requests.get(nextHopIp);	
 		if (null == request)
 		{
-//			System.out.println("not in requests Map");
 			request = new ArpRequest(nextHopIp, outIface);
 			this.requests.put(nextHopIp, request);
 		}

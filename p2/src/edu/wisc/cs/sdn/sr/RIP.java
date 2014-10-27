@@ -1,8 +1,14 @@
 package edu.wisc.cs.sdn.sr;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.RIPv2;
+import net.floodlightcontroller.packet.RIPv2Entry;
 import net.floodlightcontroller.packet.UDP;
 
 /**
@@ -11,7 +17,7 @@ import net.floodlightcontroller.packet.UDP;
   */
 public class RIP implements Runnable
 {
-    private static final int RIP_MULTICAST_IP = 0xE0000009;
+    public static final int RIP_MULTICAST_IP = 0xE0000009;
     private static final byte[] BROADCAST_MAC = {(byte)0xFF, (byte)0xFF, 
             (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF};
     
@@ -30,6 +36,7 @@ public class RIP implements Runnable
 	public RIP(Router router)
 	{ 
         this.router = router; 
+//        this.distanceVector = new LinkedList<RIPv2Entry>();
         this.tasksThread = new Thread(this);
     }
 
@@ -74,14 +81,13 @@ public class RIP implements Runnable
 		ipPacket.setSourceAddress(iface.getIpAddress());
 		ipPacket.setDestinationAddress(destIPAddress);
 		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
-		ipPacket.setTtl((byte) 64);
+		ipPacket.setTtl((byte) 16);
 		
 		Ethernet etherPacket = new Ethernet();
 		etherPacket.setPayload(ipPacket);
+		etherPacket.setEtherType(Ethernet.TYPE_IPv4);
 		etherPacket.setSourceMACAddress(iface.getMacAddress().toBytes());
 		etherPacket.setDestinationMACAddress(destMacAddress);
-		System.out.println("sending rip packet: " + etherPacket.toString());
-		System.out.println("------------------------");
 		return router.sendPacket(etherPacket, iface);
 	}
 	
@@ -106,9 +112,28 @@ public class RIP implements Runnable
 
         /*********************************************************************/
         /* TODO: Handle RIP packet                                           */
-		System.out.println("received packet:\n" + etherPacket.toString());
-		System.out.println("ripPacket print:\n" + ripPacket.toString());
-		System.out.println("------------------------");
+		if(ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
+			RIPv2 ripv2 = router.getRouteTable().getRIPv2();
+			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
+			sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
+		}else if(ripPacket.getCommand() == RIPv2.COMMAND_RESPONSE){
+			if( ripPacket.getEntries() != null && ripPacket.getEntries().size() != 0){
+				for(RIPv2Entry ripv2Entry : ripPacket.getEntries()){
+					System.out.println("I got an address : " + ripv2Entry.getAddress() + " | " + ripv2Entry.getSubnetMask());
+					RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
+					if(routeTableEntry == null){
+						router.getRouteTable().addEntry(ripv2Entry, ipPacket.getSourceAddress(), inIface.getName());
+					}else{
+						//compare the cost
+						//if the cost from ripv2Entry is smaller, update the routeTableEntry!
+						//then maybe broadcast the updated table to others except the source?
+						
+						//I should include an extra entry of my own information when sending a packet.
+						
+					}
+				}
+			}
+		}
         /*********************************************************************/
 	}
     
@@ -120,17 +145,19 @@ public class RIP implements Runnable
     {
         /*********************************************************************/
         /* TODO: Send period updates and time out route table entries        */
-		for (Iface iface : router.getInterfaces().values()){
-			RIPv2 ripv2 = new RIPv2();
-			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
-			sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
-		}
-		
-		try {
-			Thread.sleep(UPDATE_INTERVAL * 1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		while(true){
+			for (Iface iface : router.getInterfaces().values()){
+				RIPv2 ripv2 = router.getRouteTable().getRIPv2();
+				ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
+				sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
+			}
+			System.out.println("send unsolicited RIP responses!");
+			try {
+				Thread.sleep(UPDATE_INTERVAL * 1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
         /*********************************************************************/
-	}
+    }
 }

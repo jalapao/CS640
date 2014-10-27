@@ -49,6 +49,7 @@ public class Router
 
 	/** RIP subsystem */
 	private RIP rip;
+	private final int BYTE_COUNT_FROM_ORIGINAL = 8;
 
 	/**
 	 * Creates a router for a specific topology, host, and user.
@@ -243,6 +244,8 @@ public class Router
 			return;
 		
 		boolean thisIsMyIP = false;
+		if(destinationIP == rip.RIP_MULTICAST_IP)
+			thisIsMyIP = true;
 		for (Iface i : interfaces.values()) {
 			if (i.getIpAddress() == destinationIP) {
 				thisIsMyIP = true;
@@ -274,16 +277,16 @@ public class Router
 			} else
 				return;
 		} else { // not destined for one of the interfaces
-			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
-			System.out.println("TTL is " + ipPacket.getTtl());
-			ipPacket.setChecksum((short) 0);
-			etherPacket.setPayload(ipPacket);
 			
-			if (ipPacket.getTtl() <= 0) {
+			if (ipPacket.getTtl() <= 1) {
 				// type 11 code 0
 				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
 				return;
 			}
+			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
+			System.out.println("TTL is " + ipPacket.getTtl());
+			ipPacket.setChecksum((short) 0);
+			etherPacket.setPayload(ipPacket);
 			
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null){
@@ -338,12 +341,14 @@ public class Router
 		icmp.setChecksum((short) 0);
 		
 		ip.setPayload(icmp);
+		ip.setProtocol(IPv4.PROTOCOL_ICMP);
 		ip.setChecksum((short) 0);
 		ip.setTtl((byte) 64);
 		int destinationAddress = ip.getSourceAddress();
 		int sourceAddress = ip.getDestinationAddress();
 		ip.setDestinationAddress(destinationAddress);
 		ip.setSourceAddress(sourceAddress);
+		
 		
 		// TODO: if we should decrease TTL here?
 		eth.setPayload(ip);
@@ -358,13 +363,21 @@ public class Router
 	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code){
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();		
 		ICMP icmpPacket = new ICMP();
-		byte[] originData = ipPacket.getPayload().getPayload().serialize();
-		byte[] data = new byte[ipPacket.getHeaderLength() + 8];
-		byte[] dataByte = Arrays.copyOfRange(ipPacket.serialize(), 0, ipPacket.getHeaderLength());
-		System.arraycopy(dataByte, 0, data, 0, dataByte.length);
-		System.arraycopy(originData, 0, data, dataByte.length, 8);
-		icmpPacket.setPayload(new Data(data));
 		
+		byte[] originData = ipPacket.getPayload().serialize();
+//		System.out.println("original data = " + originData.length);
+		byte[] ipheader = Arrays.copyOfRange(ipPacket.serialize(), 0, ipPacket.getHeaderLength());
+//		System.out.println("ip header = " + ipheader.length);
+		byte[] unused = {(byte)0, (byte)0, (byte)0, (byte)0};
+//		System.out.println("unused = " + unused.length);
+		byte[] data = new byte[ipPacket.getHeaderLength() + BYTE_COUNT_FROM_ORIGINAL + 4];
+
+		
+		System.arraycopy(unused, 0, data, 0, 4);
+		System.arraycopy(ipheader, 0, data, 4, ipheader.length);
+		System.arraycopy(originData, 0, data, 4 + ipheader.length, BYTE_COUNT_FROM_ORIGINAL);
+		
+		icmpPacket.setPayload(new Data(data));
 		icmpPacket.setIcmpCode((byte) code);
 		icmpPacket.setIcmpType((byte) type);
 		icmpPacket.setChecksum((short) 0);
@@ -372,8 +385,11 @@ public class Router
 		ipPacket.setPayload(icmpPacket);
 		ipPacket.setChecksum((short) 0);
 		ipPacket.setTtl((byte) 64);
-		int destinationAddress = ipPacket.getDestinationAddress();
-		int sourceAddress = ipPacket.getDestinationAddress();
+		ipPacket.setProtocol(IPv4.PROTOCOL_ICMP);
+		ipPacket.setDiffServ((byte) 0);
+		
+		int destinationAddress = ipPacket.getSourceAddress();
+		int sourceAddress = inIface.getIpAddress();
 		ipPacket.setDestinationAddress(destinationAddress);
 		ipPacket.setSourceAddress(sourceAddress);
 		
@@ -402,18 +418,18 @@ public class Router
 			return false;
 	}
 	
-	private short calcIPChecksum(IPv4 packet) {
-		int accumulation = 0;
-		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
-		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
-		for (int i = 0; i < packet.getHeaderLength() * 2; ++i) {
-			accumulation += 0xffff & byteBuffer.getShort();
-		}
-		accumulation = ((accumulation >> 16) & 0xffff)
-		+ (accumulation & 0xffff);
-		short checksum = (short) (~accumulation & 0xffff);
-		return checksum;
-	}
+//	private short calcIPChecksum(IPv4 packet) {
+//		int accumulation = 0;
+//		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
+//		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
+//		for (int i = 0; i < packet.getHeaderLength() * 2; ++i) {
+//			accumulation += 0xffff & byteBuffer.getShort();
+//		}
+//		accumulation = ((accumulation >> 16) & 0xffff)
+//		+ (accumulation & 0xffff);
+//		short checksum = (short) (~accumulation & 0xffff);
+//		return checksum;
+//	}
 
 	// done and tested
 	private boolean checkICMPChecksum(ICMP packet) {
@@ -433,8 +449,6 @@ public class Router
         accumulation = ((accumulation >> 16) & 0xffff)
                 + (accumulation & 0xffff);
         short tmpChecksum = (short) (~accumulation & 0xffff);
-//        System.out.println("The tmpChecksum is " + tmpChecksum);
-//        System.out.println("Should be " + packet.getChecksum());
         if (tmpChecksum == packet.getChecksum()) {
         	return true;
         } else {

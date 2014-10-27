@@ -1,5 +1,7 @@
 package edu.wisc.cs.sdn.sr;
 
+import net.floodlightcontroller.packet.RIPv2Entry;
+
 /**
  * An entry in a route table.
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
@@ -18,9 +20,14 @@ public class RouteTableEntry
 	/** Name of the router interface out which packets should be sent to reach
 	 * the destination or gateway */
 	private String interfaceName;
+	private int nextHopAddress;
+
+
+	private int cost;
 	
 	//private int timer = 0;
-	
+
+
 	/**
 	 * Create a new route table entry.
 	 * @param destinationAddress destination IP address
@@ -38,6 +45,23 @@ public class RouteTableEntry
 		this.interfaceName = ifaceName;
 	}
 	
+	public RouteTableEntry(int destinationAddress, int gatewayAddress, 
+			int maskAddress, String ifaceName, int cost, int nextHopAddress)
+	{
+		this.destinationAddress = destinationAddress;
+		this.gatewayAddress = gatewayAddress;
+		this.maskAddress = maskAddress;
+		this.interfaceName = ifaceName;
+		this.cost = cost;
+		this.nextHopAddress = nextHopAddress;
+	}
+	
+	public RIPv2Entry toRIPv2Entry(){
+		RIPv2Entry ripv2Entry = new RIPv2Entry(destinationAddress, maskAddress, cost);
+		ripv2Entry.setNextHopAddress(nextHopAddress);
+		return ripv2Entry;
+	}
+	
 	/**
 	 * @return destination IP address
 	 */
@@ -52,7 +76,22 @@ public class RouteTableEntry
 
     public void setGatewayAddress(int gatewayAddress)
     { this.gatewayAddress = gatewayAddress; }
+
+	public int getCost() {
+		return cost;
+	}
+
+	public void setCost(int cost) {
+		this.cost = cost;
+	}
 	
+	public int getNextHopAddress() {
+		return nextHopAddress;
+	}
+
+	public void setNextHopAddress(int nextHopAddress) {
+		this.nextHopAddress = nextHopAddress;
+	}
 	/**
 	 * @return subnet mask 
 	 */
