@@ -221,7 +221,7 @@ public class Router
 		/********************************************************************/
 		/* TODO: Handle packets                                             */
 		short etherType = etherPacket.getEtherType();
-		switch(etherType){
+		switch (etherType) {
 		case Ethernet.TYPE_IPv4:
 			handleIPv4Packet(etherPacket, inIface);
 			break;
@@ -234,7 +234,7 @@ public class Router
 		/********************************************************************/
 	}
 
-	private void handleIPv4Packet(Ethernet etherPacket, Iface inIface){
+	private void handleIPv4Packet(Ethernet etherPacket, Iface inIface) {
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
@@ -244,7 +244,7 @@ public class Router
 			return;
 		
 		boolean thisIsMyIP = false;
-		if(destinationIP == rip.RIP_MULTICAST_IP)
+		if (destinationIP == rip.RIP_MULTICAST_IP)
 			thisIsMyIP = true;
 		for (Iface i : interfaces.values()) {
 			if (i.getIpAddress() == destinationIP) {
@@ -289,7 +289,7 @@ public class Router
 			etherPacket.setPayload(ipPacket);
 			
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
-			if (routeEntry == null){
+			if (routeEntry == null) {
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // unreachable net
 				return;
 			}
@@ -306,7 +306,7 @@ public class Router
 			} else {
 				ArpEntry arpEntry = arpCache.lookup(routeEntry.getDestinationAddress());
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
-				if (arpEntry == null){
+				if (arpEntry == null) {
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), inIface.getIpAddress());
 				} else {
 					etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
@@ -317,14 +317,14 @@ public class Router
 	}
 
 	// TODO
-	private RouteTableEntry findLongestPrefixMatch(int destIp){
+	private RouteTableEntry findLongestPrefixMatch(int destIp) {
 		RouteTableEntry bestfit = null;
-		for (RouteTableEntry rtEntry : this.getRouteTable().getEntries()){
+		for (RouteTableEntry rtEntry : this.getRouteTable().getEntries()) {
 			int myAddress = destIp & rtEntry.getMaskAddress();
-			if (myAddress == rtEntry.getDestinationAddress()){
+			if (myAddress == rtEntry.getDestinationAddress()) {
 				if (bestfit == null)
 					bestfit = rtEntry;
-				else if(bestfit.getMaskAddress() < rtEntry.getMaskAddress() )
+				else if (bestfit.getMaskAddress() < rtEntry.getMaskAddress() )
 					bestfit = rtEntry;
 			}
 		}
@@ -360,17 +360,15 @@ public class Router
 	}
 	
 	// TODO
-	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code){
+	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code) {
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();		
 		ICMP icmpPacket = new ICMP();
-		
+		int ipHeaderLengthInBytes = ipPacket.getHeaderLength() * 4;
 		byte[] originData = ipPacket.getPayload().serialize();
-//		System.out.println("original data = " + originData.length);
-		byte[] ipheader = Arrays.copyOfRange(ipPacket.serialize(), 0, ipPacket.getHeaderLength());
-//		System.out.println("ip header = " + ipheader.length);
+		System.out.println("The length of the IP packet in bytes is " + ipHeaderLengthInBytes);
+		byte[] ipheader = Arrays.copyOfRange(ipPacket.serialize(), 0, ipHeaderLengthInBytes);
 		byte[] unused = {(byte)0, (byte)0, (byte)0, (byte)0};
-//		System.out.println("unused = " + unused.length);
-		byte[] data = new byte[ipPacket.getHeaderLength() + BYTE_COUNT_FROM_ORIGINAL + 4];
+		byte[] data = new byte[4 + ipHeaderLengthInBytes + BYTE_COUNT_FROM_ORIGINAL];
 
 		
 		System.arraycopy(unused, 0, data, 0, 4);
