@@ -34,14 +34,6 @@ public class RouteTable
 	public List<RouteTableEntry> getEntries()
 	{ return this.entries; }
 	
-	public RIPv2 getRIPv2(){
-		RIPv2 ripv2 = new RIPv2();
-		for(RouteTableEntry rtEntry : entries){		
-			ripv2.getEntries().add(rtEntry.toRIPv2Entry());
-		}
-		return ripv2;
-	}
-	
 	/**
 	 * Populate the route table from a file.
 	 * @param filename name of the file containing the static route table
@@ -150,24 +142,26 @@ public class RouteTable
         }
 	}
 	
-	
-	public void addEntry(int dstIp, int gwIp, int maskIp, String iface, int cost, int nextHopAddress)
-	{
-		RouteTableEntry entry = new RouteTableEntry(dstIp, gwIp, maskIp, iface, cost, nextHopAddress);
+	//add an entry to the route table : 6 parameters
+	public void addEntry(int dstIp, int gwIp, int maskIp, String iface, int cost, int nextHop){
+		RouteTableEntry entry = new RouteTableEntry(dstIp, gwIp, maskIp, iface, cost, nextHop);
         synchronized(this.entries)
         { 
             this.entries.add(entry);
         }
 	}
 	
-	public void addEntry(RIPv2Entry ripv2Entry, int gwIp, String iface)
-	{
-		RouteTableEntry entry = new RouteTableEntry(ripv2Entry.getAddress(), gwIp, ripv2Entry.getSubnetMask(), iface, ripv2Entry.getMetric(), ripv2Entry.getNextHopAddress());
-        synchronized(this.entries)
-        { 
-            this.entries.add(entry);
-        }
+	public List<RIPv2Entry> getRIPv2Entries(){
+		List<RIPv2Entry> ripv2Entries = new LinkedList();
+		if(entries != null){
+			for(RouteTableEntry entry : entries){
+				ripv2Entries.add(entry.toRIPv2Entry());
+			}
+			return ripv2Entries;
+		}else
+			return null;
 	}
+	
 	/**
 	 * Remove an entry from the route table.
 	 * @param dstIP destination IP of the entry to remove
@@ -207,6 +201,7 @@ public class RouteTable
         }
         return true;
 	}
+	
 
     /**
 	 * Find an entry in the route table.

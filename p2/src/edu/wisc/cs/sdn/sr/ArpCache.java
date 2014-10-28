@@ -28,7 +28,7 @@ public class ArpCache implements Runnable
 	
 	/** Requests for IP address, MAC address pairs that should be added to the 
 	 * cache; maps an IP address to a request */
-	private Map<Integer,ArpRequest> requests; 
+	private Map<Integer,ArpRequest> requests;
 	
 	/** Thread for timing out requests and entries in the cache */
 	private Thread timeoutThread;
@@ -91,12 +91,14 @@ public class ArpCache implements Runnable
 			/*********************************************************/
 		    /* TODO: send ICMP host unreachable to the source        */ 
 		    /* address of all packets waiting on this request        */
+			
 			if((request.getWaitingPackets() != null) && (request.getWaitingPackets().size() > 0)){
 				for (Ethernet waiting : request.getWaitingPackets()) {
 					router.sendICMPError(waiting, request.getIface(), (byte) 3, (byte) 1);
 				}
 			}
 		    /*********************************************************/
+			
 			this.requests.remove(request.getIpAddress());
 		}
 		else
@@ -138,7 +140,7 @@ public class ArpCache implements Runnable
 	 */
 	public void waitForArp(Ethernet etherPacket, Iface outIface, int nextHopIp)
 	{
-		ArpRequest request = this.requests.get(nextHopIp);	
+		ArpRequest request = this.requests.get(nextHopIp);
 		if (null == request)
 		{
 			request = new ArpRequest(nextHopIp, outIface);
@@ -172,10 +174,9 @@ public class ArpCache implements Runnable
 		arpPkt.setOpCode(ARP.OP_REQUEST);
 		arpPkt.setSenderHardwareAddress(
 				request.getIface().getMacAddress().toBytes());
-//		arpPkt.setTargetHardwareAddress(broadcastMac);
-		arpPkt.setTargetHardwareAddress(
-				new byte[Ethernet.DATALAYER_ADDRESS_LENGTH]);
 		arpPkt.setSenderProtocolAddress(request.getIface().getIpAddress());
+        arpPkt.setTargetHardwareAddress(
+                new byte[Ethernet.DATALAYER_ADDRESS_LENGTH]);
 		arpPkt.setTargetProtocolAddress(request.getIpAddress());
 		
 		// Stack headers
@@ -184,9 +185,6 @@ public class ArpCache implements Runnable
 		// Send ARP request
 		System.out.println("Send ARP request");
 		System.out.println(etherPkt.toString());
-		if (etherPkt != null) {
-			System.out.println("etherPkt is not null");
-		}
 		this.router.sendPacket(etherPkt, request.getIface());
 	}
 	

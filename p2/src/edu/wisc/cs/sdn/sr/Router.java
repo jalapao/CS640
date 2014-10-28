@@ -3,7 +3,10 @@ package edu.wisc.cs.sdn.sr;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+
+import edu.wisc.cs.sdn.sr.vns.VNSComm;
 
 import net.floodlightcontroller.packet.ARP;
 import net.floodlightcontroller.packet.Data;
@@ -12,7 +15,6 @@ import net.floodlightcontroller.packet.ICMP;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.UDP;
 import net.floodlightcontroller.util.MACAddress;
-import edu.wisc.cs.sdn.sr.vns.VNSComm;
 
 /**
  * @author Aaron Gember-Jacobson
@@ -21,36 +23,35 @@ public class Router
 {
 	/** User under which the router is running */
 	private String user;
-
+	
 	/** Hostname for the router */
 	private String host;
-
+	
 	/** Template name for the router; null if no template */
 	private String template;
-
+	
 	/** Topology ID for the router */
 	private short topo;
-
+	
 	/** List of the router's interfaces; maps interface name's to interfaces */
 	private Map<String,Iface> interfaces;
-
+	
 	/** Routing table for the router */
 	private RouteTable routeTable;
-
+	
 	/** ARP cache for the router */
 	private ArpCache arpCache;
-
+	
 	/** PCAP dump file for logging all packets sent/received by the router;
 	 *  null if packets should not be logged */
 	private DumpFile logfile;
-
+	
 	/** Virtual Network Simulator communication manager for the router */
 	private VNSComm vnsComm;
 
-	/** RIP subsystem */
-	private RIP rip;
-	private final int BYTE_COUNT_FROM_ORIGINAL = 8;
-
+    /** RIP subsystem */
+    private RIP rip;
+	
 	/**
 	 * Creates a router for a specific topology, host, and user.
 	 * @param topo topology ID for the router
@@ -69,38 +70,38 @@ public class Router
 		this.routeTable = new RouteTable();
 		this.arpCache = new ArpCache(this);
 		this.vnsComm = null;
-		this.rip = new RIP(this);
+        this.rip = new RIP(this);
 	}
-
+	
 	public void init()
 	{ this.rip.init(); }
-
+	
 	/**
 	 * @param logfile PCAP dump file for logging all packets sent/received by 
 	 * 		  the router; null if packets should not be logged
 	 */
 	public void setLogFile(DumpFile logfile)
 	{ this.logfile = logfile; }
-
+	
 	/**
 	 * @return PCAP dump file for logging all packets sent/received by the
 	 *         router; null if packets should not be logged
 	 */
 	public DumpFile getLogFile()
 	{ return this.logfile; }
-
+	
 	/**
 	 * @param template template name for the router; null if no template
 	 */
 	public void setTemplate(String template)
 	{ this.template = template; }
-
+	
 	/**
 	 * @return template template name for the router; null if no template
 	 */
 	public String getTemplate()
 	{ return this.template; }
-
+		
 	/**
 	 * @param user user under which the router is running; if null, use current 
 	 *        system user
@@ -112,44 +113,44 @@ public class Router
 		else
 		{ this.user = user; }
 	}
-
+	
 	/**
 	 * @return user under which the router is running
 	 */
 	public String getUser()
 	{ return this.user; }
-
+	
 	/**
 	 * @return hostname for the router
 	 */
 	public String getHost()
 	{ return this.host; }
-
+	
 	/**
 	 * @return topology ID for the router
 	 */
 	public short getTopo()
 	{ return this.topo; }
-
+	
 	/**
 	 * @return routing table for the router
 	 */
 	public RouteTable getRouteTable()
 	{ return this.routeTable; }
-
+	
 	/**
 	 * @return list of the router's interfaces; maps interface name's to
 	 * 	       interfaces
 	 */
 	public Map<String,Iface> getInterfaces()
 	{ return this.interfaces; }
-
+	
 	/**
 	 * @param vnsComm Virtual Network System communication manager for the router
 	 */
 	public void setVNSComm(VNSComm vnsComm)
 	{ this.vnsComm = vnsComm; }
-
+	
 	/**
 	 * Close the PCAP dump file for the router, if logging is enabled.
 	 */
@@ -158,7 +159,7 @@ public class Router
 		if (logfile != null)
 		{ this.logfile.close(); }
 	}
-
+	
 	/**
 	 * Load a new routing table from a file.
 	 * @param routeTableFile the name of the file containing the routing table
@@ -171,13 +172,13 @@ public class Router
 					+ routeTableFile);
 			System.exit(1);
 		}
-
+		
 		System.out.println("Loading routing table");
 		System.out.println("---------------------------------------------");
 		System.out.print(this.routeTable.toString());
 		System.out.println("---------------------------------------------");
 	}
-
+	
 	/**
 	 * Add an interface to the router.
 	 * @param ifaceName the name of the interface
@@ -188,7 +189,7 @@ public class Router
 		this.interfaces.put(ifaceName, iface);
 		return iface;
 	}
-
+	
 	/**
 	 * Gets an interface on the router by the interface's name.
 	 * @param ifaceName name of the desired interface
@@ -197,7 +198,7 @@ public class Router
 	 */
 	public Iface getInterface(String ifaceName)
 	{ return this.interfaces.get(ifaceName); }
-
+	
 	/**
 	 * Send an Ethernet packet out a specific interface.
 	 * @param etherPacket an Ethernet packet with all fields, encapsulated
@@ -207,7 +208,7 @@ public class Router
 	 */
 	public boolean sendPacket(Ethernet etherPacket, Iface iface)
 	{ return this.vnsComm.sendPacket(etherPacket, iface.getName()); }
-
+	
 	/**
 	 * Handle an Ethernet packet received on a specific interface.
 	 * @param etherPacket the Ethernet packet that was received
@@ -237,7 +238,6 @@ public class Router
 	private void handleIPv4Packet(Ethernet etherPacket, Iface inIface) {
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
-		System.out.println("Got an IP.");
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		int destinationIP = ipPacket.getDestinationAddress();
 		
@@ -268,7 +268,7 @@ public class Router
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
 				UDP udpPacket = (UDP)ipPacket.getPayload();		
-				if (udpPacket.getDestinationPort() == 520) {
+				if (udpPacket.getDestinationPort() == UDP.RIP_PORT) {
 					rip.handlePacket(etherPacket, inIface);
 				} else
 					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
@@ -350,8 +350,6 @@ public class Router
 		ip.setDestinationAddress(destinationAddress);
 		ip.setSourceAddress(sourceAddress);
 		
-		
-		// TODO: if we should decrease TTL here?
 		eth.setPayload(ip);
 		byte[] destinationMACAddress = eth.getSourceMACAddress();
 		byte[] sourceMACAddress = eth.getDestinationMACAddress();
@@ -369,12 +367,11 @@ public class Router
 		System.out.println("The length of the IP packet in bytes is " + ipHeaderLengthInBytes);
 		byte[] ipheader = Arrays.copyOfRange(ipPacket.serialize(), 0, ipHeaderLengthInBytes);
 		byte[] unused = {(byte)0, (byte)0, (byte)0, (byte)0};
-		byte[] data = new byte[4 + ipHeaderLengthInBytes + BYTE_COUNT_FROM_ORIGINAL];
+		byte[] data = new byte[4 + ipHeaderLengthInBytes + 8];
 
-		
 		System.arraycopy(unused, 0, data, 0, 4);
 		System.arraycopy(ipheader, 0, data, 4, ipheader.length);
-		System.arraycopy(originData, 0, data, 4 + ipheader.length, BYTE_COUNT_FROM_ORIGINAL);
+		System.arraycopy(originData, 0, data, 4 + ipheader.length, 8);
 		
 		icmpPacket.setPayload(new Data(data));
 		icmpPacket.setIcmpCode((byte) code);
@@ -385,7 +382,6 @@ public class Router
 		ipPacket.setChecksum((short) 0);
 		ipPacket.setTtl((byte) 64);
 		ipPacket.setProtocol(IPv4.PROTOCOL_ICMP);
-		ipPacket.setDiffServ((byte) 0);
 		
 		int destinationAddress = ipPacket.getSourceAddress();
 		int sourceAddress = inIface.getIpAddress();
@@ -393,11 +389,12 @@ public class Router
 		ipPacket.setSourceAddress(sourceAddress);
 		
 		etherPacket.setPayload(ipPacket);
+		
 		byte[] destinationMACAddress = etherPacket.getSourceMACAddress();
 		byte[] sourceMACAddress = etherPacket.getDestinationMACAddress();
 		etherPacket.setDestinationMACAddress(destinationMACAddress);
 		etherPacket.setSourceMACAddress(sourceMACAddress);
-		System.out.println("Error message sent " + type + " " + code);
+		sendPacket(etherPacket, inIface);
 	}
 
 	// done and tested

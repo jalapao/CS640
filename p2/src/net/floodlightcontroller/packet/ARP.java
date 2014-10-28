@@ -219,8 +219,6 @@ public class ARP extends BasePacket {
         bb.putShort(this.opCode);
         bb.put(this.senderHardwareAddress, 0, 0xff & this.hardwareAddressLength);
         bb.put(this.senderProtocolAddress, 0, 0xff & this.protocolAddressLength);
-        System.out.println("target hardware address = " + this.targetHardwareAddress);
-        System.out.println("target protocol address = " + (0xff & this.hardwareAddressLength));
         bb.put(this.targetHardwareAddress, 0, 0xff & this.hardwareAddressLength);
         bb.put(this.targetProtocolAddress, 0, 0xff & this.protocolAddressLength);
         return data;

@@ -20,14 +20,13 @@ public class RouteTableEntry
 	/** Name of the router interface out which packets should be sent to reach
 	 * the destination or gateway */
 	private String interfaceName;
-	private int nextHopAddress;
-
-
+	
 	private int cost;
 	
+	private int nextHopAddress;
+	
 	//private int timer = 0;
-
-
+	
 	/**
 	 * Create a new route table entry.
 	 * @param destinationAddress destination IP address
@@ -46,8 +45,7 @@ public class RouteTableEntry
 	}
 	
 	public RouteTableEntry(int destinationAddress, int gatewayAddress, 
-			int maskAddress, String ifaceName, int cost, int nextHopAddress)
-	{
+			int maskAddress, String ifaceName, int cost, int nextHopAddress){
 		this.destinationAddress = destinationAddress;
 		this.gatewayAddress = gatewayAddress;
 		this.maskAddress = maskAddress;
@@ -62,6 +60,22 @@ public class RouteTableEntry
 		return ripv2Entry;
 	}
 	
+	public int getCost() {
+		return cost;
+	}
+
+	public void setCost(int cost) {
+		this.cost = cost;
+	}
+
+	public int getNextHopAddress() {
+		return nextHopAddress;
+	}
+
+	public void setNextHopAddress(int nextHopAddress) {
+		this.nextHopAddress = nextHopAddress;
+	}
+
 	/**
 	 * @return destination IP address
 	 */
@@ -76,22 +90,7 @@ public class RouteTableEntry
 
     public void setGatewayAddress(int gatewayAddress)
     { this.gatewayAddress = gatewayAddress; }
-
-	public int getCost() {
-		return cost;
-	}
-
-	public void setCost(int cost) {
-		this.cost = cost;
-	}
 	
-	public int getNextHopAddress() {
-		return nextHopAddress;
-	}
-
-	public void setNextHopAddress(int nextHopAddress) {
-		this.nextHopAddress = nextHopAddress;
-	}
 	/**
 	 * @return subnet mask 
 	 */
