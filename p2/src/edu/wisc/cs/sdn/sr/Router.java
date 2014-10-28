@@ -237,6 +237,7 @@ public class Router
 	private void handleIPv4Packet(Ethernet etherPacket, Iface inIface) {
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
+		System.out.println("Got an IP.");
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		int destinationIP = ipPacket.getDestinationAddress();
 		
