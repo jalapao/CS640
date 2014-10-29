@@ -124,7 +124,8 @@ public class RIP implements Runnable
 			}else{
 				//compare the metric
 				if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
-					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), ripv2Entry.getNextHopAddress(), inIface.toString());
+					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
+							ripv2Entry.getNextHopAddress(), inIface.toString(), System.currentTimeMillis());
 				}
 			}
 		}
