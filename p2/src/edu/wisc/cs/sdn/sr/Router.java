@@ -241,8 +241,15 @@ public class Router
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		int destinationIP = ipPacket.getDestinationAddress();
 		
+		// TODO
 		if (!checkIPChecksum(ipPacket))
 			return;
+		System.out.println("TTL is " + ipPacket.getTtl());
+		if (ipPacket.getTtl() <= 1) {
+			// type 11 code 0
+			sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+			return;
+		}
 		
 		boolean thisIsMyIP = false;
 		if (destinationIP == rip.RIP_MULTICAST_IP)
@@ -267,7 +274,8 @@ public class Router
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
 				//check 520
-				UDP udpPacket = (UDP)ipPacket.getPayload();		
+				UDP udpPacket = (UDP)ipPacket.getPayload();
+				System.out.println("The packet port is " + udpPacket.getDestinationPort());
 				if (udpPacket.getDestinationPort() == UDP.RIP_PORT) {
 					rip.handlePacket(etherPacket, inIface);
 				} else
@@ -279,11 +287,6 @@ public class Router
 				return;
 		} else { // not destined for one of the interfaces
 			
-			if (ipPacket.getTtl() <= 1) {
-				// type 11 code 0
-				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-				return;
-			}
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
 			System.out.println("TTL is " + ipPacket.getTtl());
 			ipPacket.setChecksum((short) 0);
@@ -364,7 +367,7 @@ public class Router
 		ICMP icmpPacket = new ICMP();
 		int ipHeaderLengthInBytes = ipPacket.getHeaderLength() * 4;
 		byte[] originData = ipPacket.getPayload().serialize();
-		System.out.println("The length of the IP packet in bytes is " + ipHeaderLengthInBytes);
+//		System.out.println("The length of the IP packet in bytes is " + ipHeaderLengthInBytes);
 		byte[] ipheader = Arrays.copyOfRange(ipPacket.serialize(), 0, ipHeaderLengthInBytes);
 		byte[] unused = {(byte)0, (byte)0, (byte)0, (byte)0};
 		byte[] data = new byte[4 + ipHeaderLengthInBytes + 8];
@@ -395,6 +398,7 @@ public class Router
 		etherPacket.setDestinationMACAddress(destinationMACAddress);
 		etherPacket.setSourceMACAddress(sourceMACAddress);
 		sendPacket(etherPacket, inIface);
+		System.out.println("send ICMP Error : " + type + " " + code);
 	}
 
 	// done and tested
@@ -413,19 +417,6 @@ public class Router
 		else
 			return false;
 	}
-	
-//	private short calcIPChecksum(IPv4 packet) {
-//		int accumulation = 0;
-//		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
-//		byteBuffer.putShort(10, (short) 0); // Set the checksum in the buffer to 0 
-//		for (int i = 0; i < packet.getHeaderLength() * 2; ++i) {
-//			accumulation += 0xffff & byteBuffer.getShort();
-//		}
-//		accumulation = ((accumulation >> 16) & 0xffff)
-//		+ (accumulation & 0xffff);
-//		short checksum = (short) (~accumulation & 0xffff);
-//		return checksum;
-//	}
 
 	// done and tested
 	private boolean checkICMPChecksum(ICMP packet) {

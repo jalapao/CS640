@@ -1,8 +1,11 @@
 package edu.wisc.cs.sdn.sr;
 
+import java.util.ConcurrentModificationException;
+
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.RIPv2;
+import net.floodlightcontroller.packet.RIPv2Entry;
 import net.floodlightcontroller.packet.UDP;
 
 /**
@@ -39,7 +42,7 @@ public class RIP implements Runnable
         if (this.router.getRouteTable().getEntries().size() > 0)
         { return; }
 
-        System.out.println("RIP: Build initial routing table");
+        System.out.println("RIP: Build initial routing table.");
         for(Iface iface : this.router.getInterfaces().values())
         {
             this.router.getRouteTable().addEntry(
@@ -54,6 +57,7 @@ public class RIP implements Runnable
         /*********************************************************************/
         /* TODO: Add other initialization code as necessary                  */
 //		send request to all
+		System.out.println(this.router.getInterfaces());
 		for(Iface iface : this.router.getInterfaces().values()){
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_REQUEST);
@@ -64,6 +68,7 @@ public class RIP implements Runnable
 	}
 	
 	public boolean sendRIPPacket(RIPv2 ripPacket, Iface iface, int destIPAddress, byte[] destMacAddress){
+		
 		UDP udp = new UDP();
 		udp.setPayload(ripPacket);
 		udp.setDestinationPort(UDP.RIP_PORT);
@@ -76,12 +81,14 @@ public class RIP implements Runnable
 		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
 		ipPacket.setSourceAddress(iface.getIpAddress());
 		ipPacket.setDestinationAddress(destIPAddress);
+		ipPacket.setTtl((byte) 16);
 		
 		Ethernet etherPacket = new Ethernet();
 		etherPacket.setDestinationMACAddress(destMacAddress);
 		etherPacket.setSourceMACAddress(iface.getMacAddress().toBytes());
 		etherPacket.setEtherType(Ethernet.TYPE_IPv4);
 		etherPacket.setPayload(ipPacket);
+		
 		return router.sendPacket(etherPacket, iface);
 	}
 
@@ -106,8 +113,27 @@ public class RIP implements Runnable
         /*********************************************************************/
         /* TODO: Handle RIP packet                                           */
 //		send response to requests
-		System.out.println("I got packet! " + ripPacket.toString());
+		System.out.println("I got packet!!!!!!!!!!!!!!!! " + ripPacket.toString());
 		System.out.println("my routetable is : " + router.getRouteTable().toString());
+		
+		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()){
+			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
+			if (routeTableEntry == null){
+				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ripv2Entry.getNextHopAddress(), ripv2Entry.getSubnetMask(), 
+						inIface.getName(), ripv2Entry.getMetric());
+			}else{
+				//compare the metric
+				if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
+					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), ripv2Entry.getNextHopAddress(), inIface.toString());
+				}
+			}
+		}
+		if (ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
+			RIPv2 ripv2 = new RIPv2();
+			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
+			ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
+			sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
+		}
         /*********************************************************************/
 	}
     
@@ -122,12 +148,14 @@ public class RIP implements Runnable
 //		send response to all
 		while (true) {
 			try {
-				Thread.sleep(UPDATE_INTERVAL * 100);
+				Thread.sleep(UPDATE_INTERVAL * 200);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+			// Need to fix concurrent bug here
+//			timeoutRouteTableEntries();
 			
-			for(Iface iface : router.getInterfaces().values()){
+			for (Iface iface : router.getInterfaces().values()){
 				RIPv2 ripv2 = new RIPv2();
 				ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
 				ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
@@ -136,4 +164,13 @@ public class RIP implements Runnable
 		}
         /*********************************************************************/
 	}
+	
+	public void timeoutRouteTableEntries(){
+		long currentTime = System.currentTimeMillis();
+		for (RouteTableEntry routeTableEntry : router.getRouteTable().getEntries()){
+			if (currentTime - routeTableEntry.getTime() >= RIP.TIMEOUT * 1000)
+				router.getRouteTable().removeEntry(routeTableEntry.getDestinationAddress(), routeTableEntry.getMaskAddress());
+		}
+	}
+	
 }

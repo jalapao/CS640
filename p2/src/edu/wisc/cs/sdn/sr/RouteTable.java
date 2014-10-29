@@ -143,8 +143,8 @@ public class RouteTable
 	}
 	
 	//add an entry to the route table : 6 parameters
-	public void addEntry(int dstIp, int gwIp, int maskIp, String iface, int cost, int nextHop){
-		RouteTableEntry entry = new RouteTableEntry(dstIp, gwIp, maskIp, iface, cost, nextHop);
+	public void addEntry(int dstIp, int gwIp, int maskIp, String iface, int cost){
+		RouteTableEntry entry = new RouteTableEntry(dstIp, gwIp, maskIp, iface, cost, System.currentTimeMillis());
         synchronized(this.entries)
         { 
             this.entries.add(entry);

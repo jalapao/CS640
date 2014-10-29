@@ -23,10 +23,12 @@ public class RouteTableEntry
 	
 	private int cost;
 	
-	private int nextHopAddress;
+	private long time;
 	
 	//private int timer = 0;
 	
+
+
 	/**
 	 * Create a new route table entry.
 	 * @param destinationAddress destination IP address
@@ -45,19 +47,26 @@ public class RouteTableEntry
 	}
 	
 	public RouteTableEntry(int destinationAddress, int gatewayAddress, 
-			int maskAddress, String ifaceName, int cost, int nextHopAddress){
+			int maskAddress, String ifaceName, int cost, long time){
 		this.destinationAddress = destinationAddress;
 		this.gatewayAddress = gatewayAddress;
 		this.maskAddress = maskAddress;
 		this.interfaceName = ifaceName;
 		this.cost = cost;
-		this.nextHopAddress = nextHopAddress;
+		this.time = time;
 	}
 	
 	public RIPv2Entry toRIPv2Entry(){
 		RIPv2Entry ripv2Entry = new RIPv2Entry(destinationAddress, maskAddress, cost);
-		ripv2Entry.setNextHopAddress(nextHopAddress);
 		return ripv2Entry;
+	}
+	
+	public long getTime() {
+		return time;
+	}
+
+	public void setTime(long time) {
+		this.time = time;
 	}
 	
 	public int getCost() {
@@ -66,14 +75,6 @@ public class RouteTableEntry
 
 	public void setCost(int cost) {
 		this.cost = cost;
-	}
-
-	public int getNextHopAddress() {
-		return nextHopAddress;
-	}
-
-	public void setNextHopAddress(int nextHopAddress) {
-		this.nextHopAddress = nextHopAddress;
 	}
 
 	/**
