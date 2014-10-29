@@ -1,5 +1,6 @@
-#Fri Oct 24 19:38:49 CDT 2014
+#Tue Oct 28 18:38:41 CDT 2014
 eclipse.preferences.version=1
+org.eclipse.debug.ui.PREF_FILTER_LAUNCH_DELETED=false
 preferredTargets=default\:default|
 org.eclipse.debug.ui.PREF_LAUNCH_PERSPECTIVES=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<launchPerspectives/>\n
-org.eclipse.debug.ui.user_view_bindings=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<viewBindings>\n<view id\="org.eclipse.ui.console.ConsoleView">\n<perspective id\="org.eclipse.ui.resourcePerspective" userAction\="opened"/>\n</view>\n</viewBindings>\n
+org.eclipse.debug.ui.user_view_bindings=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<viewBindings>\n<view id\="org.eclipse.ui.console.ConsoleView">\n<perspective id\="org.eclipse.ui.resourcePerspective" userAction\="opened"/>\n<perspective id\="org.eclipse.jdt.ui.JavaPerspective" userAction\="opened"/>\n</view>\n</viewBindings>\n
