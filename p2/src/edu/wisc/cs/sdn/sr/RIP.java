@@ -1,6 +1,5 @@
 package edu.wisc.cs.sdn.sr;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -120,10 +119,11 @@ public class RIP implements Runnable
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
 			if (routeTableEntry == null) {
 				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ipPacket.getSourceAddress(), ripv2Entry.getSubnetMask(), 
-						inIface.getName(), ripv2Entry.getMetric());
-			} else if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
+						inIface.getName(), ripv2Entry.getMetric() + 1);
+			} else if (ripv2Entry.getMetric() < routeTableEntry.getCost() || routeTableEntry.getGatewayAddress() == 0) {
 				router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
-						ripv2Entry.getNextHopAddress(), inIface.toString());
+						ipPacket.getSourceAddress(), inIface.getName(), System.currentTimeMillis());
+				routeTableEntry.setCost(ripv2Entry.getMetric() + 1);
 			}
 		}
 
@@ -133,7 +133,7 @@ public class RIP implements Runnable
 			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
 			List<RIPv2Entry> toBeSent = router.getRouteTable().getRIPv2Entries();
 			ListIterator<RIPv2Entry> it = toBeSent.listIterator();
-			while (it.hasNext()){
+			while (it.hasNext()) {
 				RIPv2Entry e = it.next();
 				if (e.getInterfaceName().equals(inIface.getName())) {
 					it.remove();
@@ -170,7 +170,7 @@ public class RIP implements Runnable
 				ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
 				List<RIPv2Entry> toBeSent = router.getRouteTable().getRIPv2Entries();
 				ListIterator<RIPv2Entry> it = toBeSent.listIterator();
-				while (it.hasNext()){
+				while (it.hasNext()) {
 					RIPv2Entry e = it.next();
 					if (e.getInterfaceName().equals(iface.getName())) {
 						it.remove();
@@ -196,10 +196,9 @@ public class RIP implements Runnable
 				continue;
 
 			if (currentTime - rtEntry.getTime() >= RIP.TIMEOUT * 1000)
-				synchronized(router.getRouteTable().getEntries()){
+				synchronized(router.getRouteTable().getEntries()) {
 					it.remove();
 				}
-			//router.getRouteTable().removeEntry(rtEntry.getDestinationAddress(), rtEntry.getMaskAddress());
 		}
 	}
 }

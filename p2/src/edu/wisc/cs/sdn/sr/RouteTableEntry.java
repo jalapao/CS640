@@ -25,10 +25,6 @@ public class RouteTableEntry
 	
 	private long time;
 	
-	//private int timer = 0;
-	
-
-
 	/**
 	 * Create a new route table entry.
 	 * @param destinationAddress destination IP address

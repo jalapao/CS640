@@ -3,7 +3,6 @@ package edu.wisc.cs.sdn.sr;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
 import edu.wisc.cs.sdn.sr.vns.VNSComm;
@@ -244,14 +243,15 @@ public class Router
 		// TODO
 		if (!checkIPChecksum(ipPacket))
 			return;
-//		if (ipPacket.getTtl() <= 1) {
-//			// Type 11 code 0
-//			sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
-//			return;
-//		}
+		
+		if (ipPacket.getTtl() <= 1) {
+			// Type 11 code 0
+			sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
+			return;
+		}
 		
 		boolean thisIsMyIP = false;
-		if (destinationIP == rip.RIP_MULTICAST_IP)
+		if (destinationIP == RIP.RIP_MULTICAST_IP)
 			thisIsMyIP = true;
 		for (Iface i : interfaces.values()) {
 			if (i.getIpAddress() == destinationIP) {
@@ -285,11 +285,6 @@ public class Router
 			} else
 				return;
 		} else { // Not destined for one of the interfaces
-			if (ipPacket.getTtl() <= 1) {
-				// Type 11 code 0
-				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
-				return;
-			}
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
 			ipPacket.setChecksum((short) 0);
 			etherPacket.setPayload(ipPacket);
