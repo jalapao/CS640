@@ -57,7 +57,7 @@ public class RIP implements Runnable
         /*********************************************************************/
         /* TODO: Add other initialization code as necessary                  */
 		System.out.println(this.router.getInterfaces());
-		for(Iface iface : this.router.getInterfaces().values()){
+		for(Iface iface : this.router.getInterfaces().values()) {
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_REQUEST);
 			ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
@@ -66,7 +66,7 @@ public class RIP implements Runnable
         /*********************************************************************/
 	}
 	
-	public boolean sendRIPPacket(RIPv2 ripPacket, Iface iface, int destIPAddress, byte[] destMacAddress){
+	public boolean sendRIPPacket(RIPv2 ripPacket, Iface iface, int destIPAddress, byte[] destMacAddress) {
 		
 		UDP udp = new UDP();
 		udp.setPayload(ripPacket);
@@ -115,20 +115,20 @@ public class RIP implements Runnable
 		System.out.println("I got packet!\n" + ripPacket.toString());
 		System.out.println("My routetable is:\n" + router.getRouteTable().toString());
 		
-		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()){
+		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()) {
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
 			if (routeTableEntry == null) {
 				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ripv2Entry.getNextHopAddress(), ripv2Entry.getSubnetMask(), 
 						inIface.getName(), ripv2Entry.getMetric());
 			} else {
 				//compare the metric
-				if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
+				if ( ripv2Entry.getMetric() < routeTableEntry.getCost()) {
 					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), ripv2Entry.getNextHopAddress(), inIface.toString());
 				}
 			}
 		}
 		// Should not reply to the incoming iface
-		if (ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
+		if (ripPacket.getCommand() == RIPv2.COMMAND_REQUEST) {
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
 			ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
@@ -155,7 +155,7 @@ public class RIP implements Runnable
 			// Need to fix concurrent bug here
 //			timeoutRouteTableEntries();
 			
-			for (Iface iface : router.getInterfaces().values()){
+			for (Iface iface : router.getInterfaces().values()) {
 				RIPv2 ripv2 = new RIPv2();
 				ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
 				ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
@@ -165,9 +165,9 @@ public class RIP implements Runnable
         /*********************************************************************/
 	}
 	
-	public void timeoutRouteTableEntries(){
+	public void timeoutRouteTableEntries() {
 		long currentTime = System.currentTimeMillis();
-		for (RouteTableEntry routeTableEntry : router.getRouteTable().getEntries()){
+		for (RouteTableEntry routeTableEntry : router.getRouteTable().getEntries()) {
 			if (currentTime - routeTableEntry.getTime() >= RIP.TIMEOUT * 1000)
 				router.getRouteTable().removeEntry(routeTableEntry.getDestinationAddress(), routeTableEntry.getMaskAddress());
 		}
