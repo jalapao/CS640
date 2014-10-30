@@ -1,6 +1,6 @@
 package edu.wisc.cs.sdn.sr;
 
-import java.util.ConcurrentModificationException;
+import java.util.ListIterator;
 
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
@@ -122,14 +122,11 @@ public class RIP implements Runnable
 						inIface.getName(), ripv2Entry.getMetric());
 			} else {
 				//compare the metric
-<<<<<<< HEAD
-				if ( ripv2Entry.getMetric() < routeTableEntry.getCost()) {
-					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), ripv2Entry.getNextHopAddress(), inIface.toString());
-=======
+//				if ( ripv2Entry.getMetric() < routeTableEntry.getCost()) {
+//					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), ripv2Entry.getNextHopAddress(), inIface.toString());
 				if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
 					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
 							ripv2Entry.getNextHopAddress(), inIface.toString(), System.currentTimeMillis());
->>>>>>> 6690a7bf93ec012fed526c5316953ce7b7ee1f26
 				}
 			}
 		}
@@ -173,9 +170,11 @@ public class RIP implements Runnable
 	
 	public void timeoutRouteTableEntries() {
 		long currentTime = System.currentTimeMillis();
-		for (RouteTableEntry routeTableEntry : router.getRouteTable().getEntries()) {
-			if (currentTime - routeTableEntry.getTime() >= RIP.TIMEOUT * 1000)
-				router.getRouteTable().removeEntry(routeTableEntry.getDestinationAddress(), routeTableEntry.getMaskAddress());
+		ListIterator<RouteTableEntry> it = router.getRouteTable().getEntries().listIterator();
+		while (it.hasNext()) {
+			if (currentTime - it.next().getTime() >= RIP.TIMEOUT * 1000)
+				it.remove();
+				//router.getRouteTable().removeEntry(routeTableEntry.getDestinationAddress(), routeTableEntry.getMaskAddress());
 		}
 	}
 	
