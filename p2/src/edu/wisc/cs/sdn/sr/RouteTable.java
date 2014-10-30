@@ -198,6 +198,7 @@ public class RouteTable
             { return false; }
             entry.setGatewayAddress(gwIp);
             entry.setInterface(ifaceName);
+            entry.setTime(System.currentTimeMillis());
         }
         return true;
 	}
