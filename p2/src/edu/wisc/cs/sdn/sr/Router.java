@@ -244,9 +244,8 @@ public class Router
 		// TODO
 		if (!checkIPChecksum(ipPacket))
 			return;
-		System.out.println("TTL is " + ipPacket.getTtl());
 		if (ipPacket.getTtl() <= 1) {
-			// type 11 code 0
+			// Type 11 code 0
 			sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
 			return;
 		}
@@ -261,15 +260,15 @@ public class Router
 			}
 		}
 		
-		if (thisIsMyIP) { //?
+		if (thisIsMyIP) {
 			// Check if timeout
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				ICMP icmpPacket = (ICMP)ipPacket.getPayload();
 				if (checkICMPChecksum(icmpPacket) && icmpPacket.getIcmpType() == (byte) 8) {
-					// send icmp echo reply here
+					// Send icmp echo reply here
 					sendICMPReply(etherPacket, inIface);
 				} else {
-					return; // drop the packet if ICMP chekcsum is wrong
+					return; // Drop the packet if ICMP checksum is wrong
 				}
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
@@ -285,19 +284,17 @@ public class Router
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
 			} else
 				return;
-		} else { // not destined for one of the interfaces
-			
+		} else { // Not destined for one of the interfaces
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
-			System.out.println("TTL is " + ipPacket.getTtl());
 			ipPacket.setChecksum((short) 0);
 			etherPacket.setPayload(ipPacket);
 			
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null) {
-				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // unreachable net
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // Unreachable net
 				return;
 			}
-			//forward message procedures:
+			// Forward message procedures
 			if (routeEntry.getGatewayAddress() == 0) {
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				
@@ -361,13 +358,12 @@ public class Router
 		sendPacket(eth, inIface);
 	}
 	
-	// TODO
+	// Done 
 	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code) {
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();		
 		ICMP icmpPacket = new ICMP();
 		int ipHeaderLengthInBytes = ipPacket.getHeaderLength() * 4;
 		byte[] originData = ipPacket.getPayload().serialize();
-//		System.out.println("The length of the IP packet in bytes is " + ipHeaderLengthInBytes);
 		byte[] ipheader = Arrays.copyOfRange(ipPacket.serialize(), 0, ipHeaderLengthInBytes);
 		byte[] unused = {(byte)0, (byte)0, (byte)0, (byte)0};
 		byte[] data = new byte[4 + ipHeaderLengthInBytes + 8];
@@ -401,7 +397,7 @@ public class Router
 		System.out.println("send ICMP Error : " + type + " " + code);
 	}
 
-	// done and tested
+	// Done and tested
 	private boolean checkIPChecksum(IPv4 packet) {
 		int accumulation = 0;
 		ByteBuffer byteBuffer = ByteBuffer.wrap(packet.serialize());
@@ -418,7 +414,7 @@ public class Router
 			return false;
 	}
 
-	// done and tested
+	// Done and tested
 	private boolean checkICMPChecksum(ICMP packet) {
 		ByteBuffer bb = ByteBuffer.wrap(packet.serialize());
 		bb.putShort(2, (short) 0);
@@ -428,7 +424,7 @@ public class Router
         for (int i = 0; i < length / 2; ++i) {
             accumulation += 0xffff & bb.getShort();
         }
-        // pad to an even number of shorts
+        // Pad to an even number of shorts
         if (length % 2 > 0) {
             accumulation += (bb.get() & 0xff) << 8;
         }
@@ -485,7 +481,6 @@ public class Router
 					/* TODO: send packet waiting on this request             */
 					packet.setSourceMACAddress(inIface.getMacAddress().toBytes());
 					packet.setDestinationMACAddress(arpPacket.getSenderHardwareAddress());
-					
 					System.out.println("Send pending ARP Request:" + Boolean.toString(sendPacket(packet, inIface)));
 					/*********************************************************/
 				}

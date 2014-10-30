@@ -50,13 +50,12 @@ public class RIP implements Runnable
                     0, // No gateway for subnets this router is connected to
                     iface.getSubnetMask(), iface.getName());
         }
-        System.out.println("Route Table:\n"+this.router.getRouteTable());
+        System.out.println("Route Table:\n" + this.router.getRouteTable());
 
 		this.tasksThread.start();
 
         /*********************************************************************/
         /* TODO: Add other initialization code as necessary                  */
-//		send request to all
 		System.out.println(this.router.getInterfaces());
 		for(Iface iface : this.router.getInterfaces().values()){
 			RIPv2 ripv2 = new RIPv2();
@@ -113,21 +112,22 @@ public class RIP implements Runnable
         /*********************************************************************/
         /* TODO: Handle RIP packet                                           */
 //		send response to requests
-		System.out.println("I got packet!!!!!!!!!!!!!!!! " + ripPacket.toString());
-		System.out.println("my routetable is : " + router.getRouteTable().toString());
+		System.out.println("I got packet!\n" + ripPacket.toString());
+		System.out.println("My routetable is:\n" + router.getRouteTable().toString());
 		
 		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()){
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
-			if (routeTableEntry == null){
+			if (routeTableEntry == null) {
 				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ripv2Entry.getNextHopAddress(), ripv2Entry.getSubnetMask(), 
 						inIface.getName(), ripv2Entry.getMetric());
-			}else{
+			} else {
 				//compare the metric
 				if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
 					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), ripv2Entry.getNextHopAddress(), inIface.toString());
 				}
 			}
 		}
+		// Should not reply to the incoming iface
 		if (ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
