@@ -202,6 +202,20 @@ public class RouteTable
         return true;
 	}
 	
+	public boolean updateEntry(int dstIp, int maskIp, int gwIp, 
+            String ifaceName, long time){
+        synchronized(this.entries)
+        {
+            RouteTableEntry entry = this.findEntry(dstIp, maskIp);
+            if (null == entry)
+            { return false; }
+            entry.setGatewayAddress(gwIp);
+            entry.setInterface(ifaceName);
+            entry.setTime(time);
+        }
+        return true;
+	}
+	
 
     /**
 	 * Find an entry in the route table.
