@@ -294,21 +294,24 @@ public class Router
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // Unreachable net
 				return;
 			}
+			System.out.println(routeEntry.getInterface());
+			
 			// Forward message procedures
 			if (routeEntry.getGatewayAddress() == 0) {
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
-				
 				if (arpCache.lookup(ipPacket.getDestinationAddress()) == null) {
+					System.out.println("If...");
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), ipPacket.getDestinationAddress());
 				} else {
+					System.out.println("Else");
 					etherPacket.setDestinationMACAddress(arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
 			} else {
-				ArpEntry arpEntry = arpCache.lookup(routeEntry.getDestinationAddress());
+				ArpEntry arpEntry = arpCache.lookup(routeEntry.getGatewayAddress());
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				if (arpEntry == null) {
-					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), inIface.getIpAddress());
+					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), routeEntry.getGatewayAddress());
 				} else {
 					etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));

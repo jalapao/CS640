@@ -92,7 +92,7 @@ public class ArpCache implements Runnable
 		    /* TODO: send ICMP host unreachable to the source        */ 
 		    /* address of all packets waiting on this request        */
 			
-			if((request.getWaitingPackets() != null) && (request.getWaitingPackets().size() > 0)){
+			if ((request.getWaitingPackets() != null) && (request.getWaitingPackets().size() > 0)) {
 				for (Ethernet waiting : request.getWaitingPackets()) {
 					router.sendICMPError(waiting, request.getIface(), (byte) 3, (byte) 1);
 				}
