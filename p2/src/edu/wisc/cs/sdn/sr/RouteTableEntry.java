@@ -58,6 +58,7 @@ public class RouteTableEntry
 	
 	public RIPv2Entry toRIPv2Entry(){
 		RIPv2Entry ripv2Entry = new RIPv2Entry(destinationAddress, maskAddress, cost);
+		ripv2Entry.setInterfaceName(interfaceName);
 		return ripv2Entry;
 	}
 	

@@ -15,8 +15,9 @@ public class RIPv2Entry
 	protected int subnetMask;
 	protected int nextHopAddress;
 	protected int metric;
+	protected String interfaceName;
 
-    public RIPv2Entry()
+	public RIPv2Entry()
     { }
 
     public RIPv2Entry(int address, int subnetMask, int metric)
@@ -53,6 +54,14 @@ public class RIPv2Entry
 
 	public void setAddress(int address)
 	{ this.address = address; }
+	
+    public String getInterfaceName() {
+		return interfaceName;
+	}
+
+	public void setInterfaceName(String interfaceName) {
+		this.interfaceName = interfaceName;
+	}
 
 	public int getSubnetMask()
 	{ return this.subnetMask; }

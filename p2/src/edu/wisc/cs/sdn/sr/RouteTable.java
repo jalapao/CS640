@@ -152,7 +152,7 @@ public class RouteTable
 	}
 	
 	public List<RIPv2Entry> getRIPv2Entries(){
-		List<RIPv2Entry> ripv2Entries = new LinkedList();
+		List<RIPv2Entry> ripv2Entries = new LinkedList<RIPv2Entry>();
 		if(entries != null){
 			for(RouteTableEntry entry : entries){
 				ripv2Entries.add(entry.toRIPv2Entry());

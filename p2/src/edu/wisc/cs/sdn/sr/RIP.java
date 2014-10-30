@@ -1,5 +1,7 @@
 package edu.wisc.cs.sdn.sr;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 
 import net.floodlightcontroller.packet.Ethernet;
@@ -117,23 +119,32 @@ public class RIP implements Runnable
 		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()) {
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
 			if (routeTableEntry == null) {
-//				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ripv2Entry.getNextHopAddress(), ripv2Entry.getSubnetMask(), 
-//						inIface.getName(), ripv2Entry.getMetric());
 				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ipPacket.getSourceAddress(), ripv2Entry.getSubnetMask(), 
 						inIface.getName(), ripv2Entry.getMetric());
 			} else if ( ripv2Entry.getMetric() < routeTableEntry.getCost() ){
-					router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
-							ripv2Entry.getNextHopAddress(), inIface.toString());
+				router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
+						ripv2Entry.getNextHopAddress(), inIface.toString());
+			}
+		}
+
+		// Should not reply to the incoming iface
+		if (ripPacket.getCommand() == RIPv2.COMMAND_REQUEST) {
+			RIPv2 ripv2 = new RIPv2();
+			ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
+			List<RIPv2Entry> toBeSent = router.getRouteTable().getRIPv2Entries();
+			ListIterator<RIPv2Entry> it = toBeSent.listIterator();
+			while (it.hasNext()){
+				RIPv2Entry e = it.next();
+				if (e.getInterfaceName().equals(inIface.getName())) {
+					it.remove();
 				}
 			}
-			// Should not reply to the incoming iface
-			if (ripPacket.getCommand() == RIPv2.COMMAND_REQUEST) {
-				RIPv2 ripv2 = new RIPv2();
-				ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
-				ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
-				// Rest the gateway IP
-				sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
-			}
+
+			System.out.println(toBeSent.toString());
+			ripv2.setEntries(toBeSent);
+			// Rest the gateway IP
+			sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
+		}
 		/*********************************************************************/
 	}
 
@@ -145,20 +156,29 @@ public class RIP implements Runnable
 	{
 		/*********************************************************************/
 		/* TODO: Send period updates and time out route table entries        */
-		//		send response to all
 		while (true) {
 			try {
-				Thread.sleep(UPDATE_INTERVAL * 200);
+				Thread.sleep(UPDATE_INTERVAL * 1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 			// Need to fix concurrent bug here
-//			timeoutRouteTableEntries();
+			timeoutRouteTableEntries();
 
 			for (Iface iface : router.getInterfaces().values()) {
 				RIPv2 ripv2 = new RIPv2();
 				ripv2.setCommand(RIPv2.COMMAND_RESPONSE);
-				ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
+				List<RIPv2Entry> toBeSent = router.getRouteTable().getRIPv2Entries();
+				ListIterator<RIPv2Entry> it = toBeSent.listIterator();
+				while (it.hasNext()){
+					RIPv2Entry e = it.next();
+					if (e.getInterfaceName().equals(iface.getName())) {
+						it.remove();
+					}
+				}	
+				ripv2.setEntries(toBeSent);
+				System.out.println(toBeSent.toString());
+
 				sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
 			}
 		}
@@ -168,11 +188,18 @@ public class RIP implements Runnable
 	public void timeoutRouteTableEntries() {
 		long currentTime = System.currentTimeMillis();
 		ListIterator<RouteTableEntry> it = router.getRouteTable().getEntries().listIterator();
+
 		while (it.hasNext()) {
-			if (currentTime - it.next().getTime() >= RIP.TIMEOUT * 1000)
-				it.remove();
-				//router.getRouteTable().removeEntry(routeTableEntry.getDestinationAddress(), routeTableEntry.getMaskAddress());
+			RouteTableEntry rtEntry = it.next();
+
+			if (rtEntry.getGatewayAddress() == 0 )
+				continue;
+
+			if (currentTime - rtEntry.getTime() >= RIP.TIMEOUT * 1000)
+				synchronized(router.getRouteTable().getEntries()){
+					it.remove();
+				}
+			//router.getRouteTable().removeEntry(rtEntry.getDestinationAddress(), rtEntry.getMaskAddress());
 		}
 	}
-
 }
