@@ -114,6 +114,9 @@ public class RIP implements Runnable
 		System.out.println("My routetable is:\n" + router.getRouteTable().toString());
 
 		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()) {
+			if (ripv2Entry.getMetric() >= 15) {
+				continue;
+			}
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
 			if (routeTableEntry == null) {
 				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ipPacket.getSourceAddress(), ripv2Entry.getSubnetMask(), 
@@ -187,7 +190,7 @@ public class RIP implements Runnable
 		while (it.hasNext()) {
 			RouteTableEntry rtEntry = it.next();
 
-			if (rtEntry.getGatewayAddress() == 0 )
+			if (rtEntry.getGatewayAddress() == 0)
 				continue;
 
 			if (currentTime - rtEntry.getTime() >= RIP.TIMEOUT * 1000)
