@@ -49,7 +49,7 @@ public class RIP implements Runnable
 			this.router.getRouteTable().addEntry(
 					(iface.getIpAddress() & iface.getSubnetMask()),
 					0, // No gateway for subnets this router is connected to
-					iface.getSubnetMask(), iface.getName());
+					iface.getSubnetMask(), iface.getName(), 0);
 		}
 		System.out.println("Route Table:\n" + this.router.getRouteTable());
 
@@ -111,8 +111,6 @@ public class RIP implements Runnable
 
 		/*********************************************************************/
 		/* TODO: Handle RIP packet                                           */
-		//		send response to requests
-		System.out.println("I got packet!\n" + ripPacket.toString());
 		System.out.println("My routetable is:\n" + router.getRouteTable().toString());
 
 		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()) {
@@ -120,7 +118,7 @@ public class RIP implements Runnable
 			if (routeTableEntry == null) {
 				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ipPacket.getSourceAddress(), ripv2Entry.getSubnetMask(), 
 						inIface.getName(), ripv2Entry.getMetric() + 1);
-			} else if (ripv2Entry.getMetric() < routeTableEntry.getCost() || routeTableEntry.getGatewayAddress() == 0) {
+			} else if (ripv2Entry.getMetric() < routeTableEntry.getCost()) {
 				router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
 						ipPacket.getSourceAddress(), inIface.getName(), System.currentTimeMillis());
 				routeTableEntry.setCost(ripv2Entry.getMetric() + 1);
@@ -139,8 +137,6 @@ public class RIP implements Runnable
 					it.remove();
 				}
 			}
-
-			System.out.println(toBeSent.toString());
 			ripv2.setEntries(toBeSent);
 			// Rest the gateway IP
 			sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
@@ -177,7 +173,6 @@ public class RIP implements Runnable
 					}
 				}	
 				ripv2.setEntries(toBeSent);
-				System.out.println(toBeSent.toString());
 
 				sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
 			}

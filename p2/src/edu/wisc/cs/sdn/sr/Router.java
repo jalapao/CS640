@@ -244,12 +244,6 @@ public class Router
 		if (!checkIPChecksum(ipPacket))
 			return;
 		
-		if (ipPacket.getTtl() <= 1) {
-			// Type 11 code 0
-			sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
-			return;
-		}
-		
 		boolean thisIsMyIP = false;
 		if (destinationIP == RIP.RIP_MULTICAST_IP)
 			thisIsMyIP = true;
@@ -285,6 +279,11 @@ public class Router
 			} else
 				return;
 		} else { // Not destined for one of the interfaces
+			if (ipPacket.getTtl() <= 1) {
+				// Type 11 code 0
+				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+				return;
+			}
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
 			ipPacket.setChecksum((short) 0);
 			etherPacket.setPayload(ipPacket);
