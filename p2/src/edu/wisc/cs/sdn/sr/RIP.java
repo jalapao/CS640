@@ -116,11 +116,11 @@ public class RIP implements Runnable
 			}
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
 			if (routeTableEntry == null) {
-				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ipPacket.getSourceAddress(), ripv2Entry.getSubnetMask(), 
+				router.getRouteTable().addEntry(ripv2Entry.getAddress(), ripv2Entry.getNextHopAddress(), ripv2Entry.getSubnetMask(), 
 						inIface.getName(), ripv2Entry.getMetric() + 1);
 			} else if (ripv2Entry.getMetric() + 1 < routeTableEntry.getCost()) {
 				router.getRouteTable().updateEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask(), 
-						ipPacket.getSourceAddress(), inIface.getName(), System.currentTimeMillis());
+						ripv2Entry.getNextHopAddress(), inIface.getName(), System.currentTimeMillis());
 				routeTableEntry.setCost(ripv2Entry.getMetric() + 1);
 			}
 		}
