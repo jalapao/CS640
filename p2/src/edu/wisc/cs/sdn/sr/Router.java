@@ -217,7 +217,7 @@ public class Router
 	{
 		System.out.println("*** -> Received packet: " +
 				etherPacket.toString().replace("\n", "\n\t"));
-
+		System.out.flush();
 		/********************************************************************/
 		/* TODO: Handle packets                                             */
 		short etherType = etherPacket.getEtherType();
@@ -341,10 +341,10 @@ public class Router
 		RouteTableEntry bestfit = null;
 		for (RouteTableEntry rtEntry : this.getRouteTable().getEntries()) {
 			int myAddress = destIp & rtEntry.getMaskAddress();
-			if (myAddress == rtEntry.getDestinationAddress()) {
+			if (myAddress == (rtEntry.getDestinationAddress() & rtEntry.getMaskAddress())) {
 				if (bestfit == null)
 					bestfit = rtEntry;
-				else if (bestfit.getMaskAddress() < rtEntry.getMaskAddress() )
+				else if (bestfit.getMaskAddress() < rtEntry.getMaskAddress())
 					bestfit = rtEntry;
 			}
 		}

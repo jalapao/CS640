@@ -185,6 +185,7 @@ public class ArpCache implements Runnable
 		// Send ARP request
 		System.out.println("Send ARP request");
 		System.out.println(etherPkt.toString());
+		System.out.flush();
 		this.router.sendPacket(etherPkt, request.getIface());
 	}
 	
@@ -220,6 +221,7 @@ public class ArpCache implements Runnable
 		// Send ARP request
 		System.out.println("Send ARP reply");
 		System.out.println(arpReply.toString());
+		System.out.flush();
 		this.router.sendPacket(etherReply, iface);
 	}
 }
