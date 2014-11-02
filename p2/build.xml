@@ -1,4 +1,4 @@
-<project name="SimpleRouter" default="dist">
+<project name="router" default="dist">
     <target name="init">
         <mkdir dir="bin/" />
     </target>

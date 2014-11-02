@@ -79,7 +79,7 @@ public class RIP implements Runnable
 		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
 		ipPacket.setSourceAddress(iface.getIpAddress());
 		ipPacket.setDestinationAddress(destIPAddress);
-		ipPacket.setTtl((byte) 16);
+		ipPacket.setTtl((byte) 64);
 
 		Ethernet etherPacket = new Ethernet();
 		etherPacket.setDestinationMACAddress(destMacAddress);
