@@ -282,20 +282,20 @@ public class Router
 					rip.handlePacket(etherPacket, inIface);
 				} else {
 					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
-					if (ipPacket.getTtl() <= 1) {
-						// Type 11 code 0
-						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-						return;
-					}
+//					if (ipPacket.getTtl() <= 1) {
+//						// Type 11 code 0
+//						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+//						return;
+//					}
 				}
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_TCP) {
-				if (ipPacket.getTtl() <= 1) {
-					// Type 11 code 0
-					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-					return;
-				}
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
+//				if (ipPacket.getTtl() <= 1) {
+//					// Type 11 code 0
+//					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+//					return;
+//				}
 			} else
 				return;
 		} else { // Not destined for one of the interfaces
