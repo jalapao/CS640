@@ -114,9 +114,7 @@ public class RouteTableEntry
         if (gwString.length() < 8)
         { result += "\t"; }
 		result += Util.intToDottedDecimal(maskAddress) + "\t";
-//		result += interfaceName;
-		result += interfaceName + "\t\t";
-		result += cost;
+		result += interfaceName;
 		return result;
 	}
 }

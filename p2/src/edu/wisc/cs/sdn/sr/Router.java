@@ -313,16 +313,13 @@ public class Router
 				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // Unreachable net
 				return;
 			}
-			System.out.println(routeEntry.getInterface());
 
 			// Forward message procedures
 			if (routeEntry.getGatewayAddress() == 0) {
 				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				if (arpCache.lookup(ipPacket.getDestinationAddress()) == null) {
-					System.out.println("If...");
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), ipPacket.getDestinationAddress());
 				} else {
-					System.out.println("Else");
 					etherPacket.setDestinationMACAddress(arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
@@ -415,8 +412,8 @@ public class Router
 		byte[] sourceMACAddress = etherPacket.getDestinationMACAddress();
 		etherPacket.setDestinationMACAddress(destinationMACAddress);
 		etherPacket.setSourceMACAddress(sourceMACAddress);
+//		System.out.println("Error: " + type + " " + code);
 		sendPacket(etherPacket, inIface);
-		System.out.println("send ICMP Error : " + type + " " + code);
 	}
 
 	// Done and tested
@@ -503,7 +500,7 @@ public class Router
 					/* TODO: send packet waiting on this request             */
 					packet.setSourceMACAddress(inIface.getMacAddress().toBytes());
 					packet.setDestinationMACAddress(arpPacket.getSenderHardwareAddress());
-					System.out.println("Send pending ARP Request:" + Boolean.toString(sendPacket(packet, inIface)));
+					sendPacket(packet, inIface);
 					/*********************************************************/
 				}
 			}
