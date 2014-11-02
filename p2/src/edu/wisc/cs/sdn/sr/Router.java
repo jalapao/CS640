@@ -316,19 +316,21 @@ public class Router
 
 			// Forward message procedures
 			if (routeEntry.getGatewayAddress() == 0) {
-				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
+//				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				if (arpCache.lookup(ipPacket.getDestinationAddress()) == null) {
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), ipPacket.getDestinationAddress());
 				} else {
+					etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 					etherPacket.setDestinationMACAddress(arpCache.lookup(ipPacket.getDestinationAddress()).getMac().toBytes());
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
 			} else {
 				ArpEntry arpEntry = arpCache.lookup(routeEntry.getGatewayAddress());
-				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
+//				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				if (arpEntry == null) {
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), routeEntry.getGatewayAddress());
 				} else {
+					etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 					etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
 					sendPacket(etherPacket, interfaces.get(routeEntry.getInterface()));
 				}
@@ -412,8 +414,21 @@ public class Router
 		byte[] sourceMACAddress = etherPacket.getDestinationMACAddress();
 		etherPacket.setDestinationMACAddress(destinationMACAddress);
 		etherPacket.setSourceMACAddress(sourceMACAddress);
+		
 //		System.out.println("Error: " + type + " " + code);
-		sendPacket(etherPacket, inIface);
+		if (type == (byte) 3 && code == (byte) 1) {
+			for (Iface i : interfaces.values()) {
+				if (i.getMacAddress().equals(new MACAddress(sourceMACAddress))) {
+					ipPacket.setSourceAddress(i.getIpAddress());
+					etherPacket.setPayload(ipPacket);
+//					System.out.println(etherPacket.toString());
+					sendPacket(etherPacket, i);
+				}
+			}
+		} else {
+//			System.out.println(etherPacket.toString());
+			sendPacket(etherPacket, inIface);
+		}
 	}
 
 	// Done and tested
