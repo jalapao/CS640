@@ -150,7 +150,7 @@ public class RIP implements Runnable
 			sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
 		}
 //		System.out.println("Done...");
-		System.out.println("\nRoute Table:\n" + router.getRouteTable().toString());
+//		System.out.println("\nRoute Table:\n" + router.getRouteTable().toString());
 //		System.out.flush();
 		/*********************************************************************/
 	}
@@ -239,6 +239,6 @@ public class RIP implements Runnable
 //					System.out.println("My routetable is:\n" + router.getRouteTable().toString());
 				}
 		}
-		System.out.println("\nRoute Table:\n" + router.getRouteTable().toString());
+//		System.out.println("\nRoute Table:\n" + router.getRouteTable().toString());
 	}
 }
