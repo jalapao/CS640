@@ -60,7 +60,11 @@ public class RIP implements Runnable
 		for(Iface iface : this.router.getInterfaces().values()) {
 			RIPv2 ripv2 = new RIPv2();
 			ripv2.setCommand(RIPv2.COMMAND_REQUEST);
-			ripv2.setEntries(router.getRouteTable().getRIPv2Entries());
+			List<RIPv2Entry> toBeSent = router.getRouteTable().getRIPv2Entries();
+			for (RIPv2Entry r : toBeSent) {
+				r.setNextHopAddress(iface.getIpAddress());
+			}
+			ripv2.setEntries(toBeSent);
 			sendRIPPacket(ripv2, iface, RIP_MULTICAST_IP, BROADCAST_MAC);
 		}
 		/*********************************************************************/
@@ -137,6 +141,8 @@ public class RIP implements Runnable
 				RIPv2Entry e = it.next();
 				if (e.getInterfaceName().equals(inIface.getName())) {
 					it.remove();
+				} else {
+					e.setNextHopAddress(inIface.getIpAddress());
 				}
 			}
 			ripv2.setEntries(toBeSent);
@@ -144,7 +150,7 @@ public class RIP implements Runnable
 			sendRIPPacket(ripv2, inIface, ipPacket.getSourceAddress(), etherPacket.getSourceMACAddress());
 		}
 //		System.out.println("Done...");
-		System.out.println("My routetable is:\n" + router.getRouteTable().toString());
+		System.out.println("\nRoute Table:\n" + router.getRouteTable().toString());
 //		System.out.flush();
 		/*********************************************************************/
 	}
@@ -203,6 +209,8 @@ public class RIP implements Runnable
 					RIPv2Entry e = it.next();
 					if (e.getInterfaceName().equals(iface.getName())) {
 						it.remove();
+					} else {
+						e.setNextHopAddress(iface.getIpAddress());
 					}
 				}	
 				ripv2.setEntries(toBeSent);
@@ -231,5 +239,6 @@ public class RIP implements Runnable
 //					System.out.println("My routetable is:\n" + router.getRouteTable().toString());
 				}
 		}
+		System.out.println("\nRoute Table:\n" + router.getRouteTable().toString());
 	}
 }
