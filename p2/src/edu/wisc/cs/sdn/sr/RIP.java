@@ -49,7 +49,7 @@ public class RIP implements Runnable
 			this.router.getRouteTable().addEntry(
 					(iface.getIpAddress() & iface.getSubnetMask()),
 					0, // No gateway for subnets this router is connected to
-					iface.getSubnetMask(), iface.getName(), 0);
+					iface.getSubnetMask(), iface.getName(), 1);
 		}
 		System.out.println("Route Table:\n" + this.router.getRouteTable());
 
@@ -115,7 +115,7 @@ public class RIP implements Runnable
 		/*********************************************************************/
 		/* TODO: Handle RIP packet                                           */
 		for (RIPv2Entry ripv2Entry : ripPacket.getEntries()) {
-			if (ripv2Entry.getMetric() >= 15) {
+			if (ripv2Entry.getMetric() >= 16) {
 				continue;
 			}
 			RouteTableEntry routeTableEntry = router.getRouteTable().findEntry(ripv2Entry.getAddress(), ripv2Entry.getSubnetMask());
