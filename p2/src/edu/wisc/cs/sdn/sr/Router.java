@@ -259,7 +259,7 @@ public class Router
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
 				if (ipPacket.getTtl() <= 1) {
 					// Type 11 code 0
-					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, true);
 					return;
 				}
 				ICMP icmpPacket = (ICMP)ipPacket.getPayload();
@@ -276,12 +276,12 @@ public class Router
 				if (udpPacket.getDestinationPort() == UDP.RIP_PORT) {
 					if (ipPacket.getTtl() <= 1) {
 						// Type 11 code 0
-						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, true);
 						return;
 					}
 					rip.handlePacket(etherPacket, inIface);
 				} else {
-					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
+					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3, true);
 //					if (ipPacket.getTtl() <= 1) {
 //						// Type 11 code 0
 //						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
@@ -290,7 +290,7 @@ public class Router
 				}
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_TCP) {
-				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3, true);
 //				if (ipPacket.getTtl() <= 1) {
 //					// Type 11 code 0
 //					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
@@ -301,7 +301,7 @@ public class Router
 		} else { // Not destined for one of the interfaces
 			if (ipPacket.getTtl() <= 1) {
 				// Type 11 code 0
-				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, false);
 				return;
 			}
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
@@ -310,7 +310,7 @@ public class Router
 
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null) {
-				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // Unreachable net
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0, false); // Unreachable net
 				return;
 			}
 
@@ -380,7 +380,7 @@ public class Router
 	}
 
 	// Done 
-	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code) {
+	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code, boolean dstOrNot) {
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();		
 		ICMP icmpPacket = new ICMP();
 		int ipHeaderLengthInBytes = ipPacket.getHeaderLength() * 4;
@@ -402,9 +402,15 @@ public class Router
 		ipPacket.setChecksum((short) 0);
 		ipPacket.setTtl((byte) 64);
 		ipPacket.setProtocol(IPv4.PROTOCOL_ICMP);
-
+		int sourceAddress;
 		int destinationAddress = ipPacket.getSourceAddress();
-		int sourceAddress = inIface.getIpAddress();
+		if (dstOrNot) {
+			sourceAddress = ipPacket.getDestinationAddress();
+		} else {
+			sourceAddress = inIface.getIpAddress();
+		}
+//		int sourceAddress = inIface.getIpAddress();
+//		int sourceAddress = ipPacket.getDestinationAddress();
 		ipPacket.setDestinationAddress(destinationAddress);
 		ipPacket.setSourceAddress(sourceAddress);
 
@@ -419,7 +425,7 @@ public class Router
 		if (type == (byte) 3 && code == (byte) 1) {
 			for (Iface i : interfaces.values()) {
 				if (i.getMacAddress().equals(new MACAddress(sourceMACAddress))) {
-					ipPacket.setSourceAddress(i.getIpAddress());
+					ipPacket.setSourceAddress(inIface.getIpAddress());
 					etherPacket.setPayload(ipPacket);
 //					System.out.println(etherPacket.toString());
 					sendPacket(etherPacket, i);
