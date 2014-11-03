@@ -257,7 +257,7 @@ public class Router
 		if (thisIsMyIP) {
 			// Check if timeout
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
-				if (ipPacket.getTtl() <= 1) {
+				if (ipPacket.getTtl() < 1) {
 					// Type 11 code 0
 					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, true);
 					return;
@@ -274,7 +274,7 @@ public class Router
 				// Check 520
 				UDP udpPacket = (UDP)ipPacket.getPayload();
 				if (udpPacket.getDestinationPort() == UDP.RIP_PORT) {
-					if (ipPacket.getTtl() <= 1) {
+					if (ipPacket.getTtl() < 1) {
 						// Type 11 code 0
 						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, true);
 						return;
