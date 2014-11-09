@@ -212,7 +212,7 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		/*********************************************************************/
 		/* TODO: Update routing: change rules to route to host               */
 		
-		//WYR: 1. update MAC address <-> IP address
+		//WYR: 1. directly linked hosts : update MAC address and send it
 		OFMatch ofMatch = new OFMatch();
 		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
 		ofMatch.setNetworkDestination(OFMatch.ETH_TYPE_IPV4, host.getIPv4Address());
