@@ -29,6 +29,7 @@ import net.floodlightcontroller.routing.Link;
 import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFOXMFieldType;
 import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionDecrementNwTTL;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionSetField;
 import org.openflow.protocol.instruction.OFInstruction;
@@ -128,6 +129,65 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
      */
     private Collection<Link> getLinks()
     { return linkDiscProv.getLinks().keySet(); }
+    
+    private OFMatch getMatchByNetworkDest(int destIpv4Address){
+		OFMatch ofMatch = new OFMatch();
+		ofMatch.setDataLayerType(Ethernet.TYPE_IPv4);
+		ofMatch.setNetworkDestination(destIpv4Address);
+		return ofMatch;
+    }
+    
+    private OFMatch getMatchByMacDest(byte[] destMacAddress){
+		OFMatch ofMatch = new OFMatch();
+		ofMatch.setDataLayerDestination(destMacAddress);
+		return ofMatch;
+		
+    }
+    
+    
+    private void addHostIPv4ForwardRule(Host host){		
+		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
+		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
+				new OFActionSetField(OFOXMFieldType.ETH_DST, Ethernet.toByteArray(host.getMACAddress())),
+				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
+				new OFActionDecrementNwTTL(),
+				new OFActionOutput(host.getPort())
+				)));	
+		System.out.println("IPV4 rule installing! Host name:" + host.getName());
+		for(IOFSwitch everySwitch : getSwitches().values()){
+			SwitchCommands.installRule(everySwitch, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByNetworkDest(host.getIPv4Address()), 
+					new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
+		}	
+    }
+    
+    private void addHostMacForwardRule(Host host){
+		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
+		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
+				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
+				new OFActionDecrementNwTTL(),
+				new OFActionOutput(host.getPort()) 
+				)));
+		System.out.println("MAC rule installing! Host name:" + host.getName());
+		for(IOFSwitch everySwitch : getSwitches().values()){
+			SwitchCommands.installRule(everySwitch, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())),
+					new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
+		}	
+    }
+    
+    private void deleteHostMacForwardRule(Host host){
+    	System.out.println("MAC rule removing! Host name:" + host.getName());
+		for(IOFSwitch everySwitch : getSwitches().values()){
+			SwitchCommands.removeRules(everySwitch, table, getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())));
+		}
+    }
+    
+    private void deleteHostIPv4ForwardRule(Host host){
+    	System.out.println("IPV4 rule removing! Host name:" + host.getName());
+		for(IOFSwitch everySwitch : getSwitches().values()){
+			SwitchCommands.removeRules(everySwitch, table, getMatchByNetworkDest(host.getIPv4Address()));
+		}
+    }
+    
 
     /**
      * Event handler called when a host joins the network.
@@ -147,18 +207,9 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 			/* TODO: Update routing: add rules to route to new host          */
 			
 			//WYR: 1. directly linked hosts : update MAC address and send it
-			OFMatch ofMatch = new OFMatch();
-			OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
-			ofMatch.setNetworkDestination(OFMatch.ETH_TYPE_IPV4, host.getIPv4Address());
-			
-			ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
-					new OFActionSetField(OFOXMFieldType.ETH_DST, Ethernet.toByteArray(host.getMACAddress())), 
-					new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
-					new OFActionOutput(host.getPort()) )));
-			
-			for(IOFSwitch oneSwitch : getSwitches().values()){
-				SwitchCommands.installRule(oneSwitch, table, SwitchCommands.DEFAULT_PRIORITY , ofMatch, new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
-			}			
+			addHostIPv4ForwardRule(host);
+			//WYR: 2. directly linked hosts : send it by MAC address
+			addHostMacForwardRule(host);
 			
 			/*****************************************************************/
 		}
@@ -183,7 +234,8 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: remove rules to route to host               */
-		
+		deleteHostIPv4ForwardRule(host);
+		deleteHostMacForwardRule(host);
 		/*********************************************************************/
 	}
 
@@ -213,18 +265,9 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		/* TODO: Update routing: change rules to route to host               */
 		
 		//WYR: 1. directly linked hosts : update MAC address and send it
-		OFMatch ofMatch = new OFMatch();
-		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
-		ofMatch.setNetworkDestination(OFMatch.ETH_TYPE_IPV4, host.getIPv4Address());
-		
-		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
-				new OFActionSetField(OFOXMFieldType.ETH_DST, Ethernet.toByteArray(host.getMACAddress())), 
-				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
-				new OFActionOutput(host.getPort()) )));
-
-		for(IOFSwitch oneSwitch : getSwitches().values()){
-			SwitchCommands.installRule(oneSwitch, table, SwitchCommands.DEFAULT_PRIORITY , ofMatch, new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
-		}
+		addHostIPv4ForwardRule(host);
+		//WYR: 2. directly linked hosts : send it by MAC address
+		addHostMacForwardRule(host);
 		
 		/*********************************************************************/
 	}
