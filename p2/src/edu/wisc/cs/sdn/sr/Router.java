@@ -256,12 +256,12 @@ public class Router
 
 		if (thisIsMyIP) {
 			// Check if timeout
+			if (ipPacket.getTtl() < 1) {
+				// Type 11 code 0
+				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, true);
+				return;
+			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP) {
-				if (ipPacket.getTtl() <= 1) {
-					// Type 11 code 0
-					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-					return;
-				}
 				ICMP icmpPacket = (ICMP)ipPacket.getPayload();
 				if (checkICMPChecksum(icmpPacket) && icmpPacket.getIcmpType() == (byte) 8) {
 					// Send ICMP echo reply here
@@ -274,34 +274,19 @@ public class Router
 				// Check 520
 				UDP udpPacket = (UDP)ipPacket.getPayload();
 				if (udpPacket.getDestinationPort() == UDP.RIP_PORT) {
-					if (ipPacket.getTtl() <= 1) {
-						// Type 11 code 0
-						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-						return;
-					}
 					rip.handlePacket(etherPacket, inIface);
 				} else {
-					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
-//					if (ipPacket.getTtl() <= 1) {
-//						// Type 11 code 0
-//						sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-//						return;
-//					}
+					sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3, true);
 				}
 			}
 			if (ipPacket.getProtocol() == IPv4.PROTOCOL_TCP) {
-				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3);
-//				if (ipPacket.getTtl() <= 1) {
-//					// Type 11 code 0
-//					sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
-//					return;
-//				}
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 3, true);
 			} else
 				return;
 		} else { // Not destined for one of the interfaces
 			if (ipPacket.getTtl() <= 1) {
 				// Type 11 code 0
-				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0);
+				sendICMPError(etherPacket, inIface, (byte) 11, (byte) 0, false);
 				return;
 			}
 			ipPacket.setTtl((byte)((int)ipPacket.getTtl() - 1));
@@ -310,13 +295,12 @@ public class Router
 
 			RouteTableEntry routeEntry = findLongestPrefixMatch(destinationIP);
 			if (routeEntry == null) {
-				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0); // Unreachable net
+				sendICMPError(etherPacket, inIface, (byte) 3, (byte) 0, false); // Unreachable net
 				return;
 			}
 
 			// Forward message procedures
 			if (routeEntry.getGatewayAddress() == 0) {
-//				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				if (arpCache.lookup(ipPacket.getDestinationAddress()) == null) {
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), ipPacket.getDestinationAddress());
 				} else {
@@ -326,7 +310,6 @@ public class Router
 				}
 			} else {
 				ArpEntry arpEntry = arpCache.lookup(routeEntry.getGatewayAddress());
-//				etherPacket.setSourceMACAddress(interfaces.get(routeEntry.getInterface()).getMacAddress().toBytes());
 				if (arpEntry == null) {
 					arpCache.waitForArp(etherPacket, interfaces.get(routeEntry.getInterface()), routeEntry.getGatewayAddress());
 				} else {
@@ -380,7 +363,7 @@ public class Router
 	}
 
 	// Done 
-	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code) {
+	public void sendICMPError(Ethernet etherPacket, Iface inIface, byte type, byte code, boolean dstOrNot) {
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();		
 		ICMP icmpPacket = new ICMP();
 		int ipHeaderLengthInBytes = ipPacket.getHeaderLength() * 4;
@@ -402,9 +385,13 @@ public class Router
 		ipPacket.setChecksum((short) 0);
 		ipPacket.setTtl((byte) 64);
 		ipPacket.setProtocol(IPv4.PROTOCOL_ICMP);
-
+		int sourceAddress;
 		int destinationAddress = ipPacket.getSourceAddress();
-		int sourceAddress = inIface.getIpAddress();
+		if (dstOrNot) {
+			sourceAddress = ipPacket.getDestinationAddress();
+		} else {
+			sourceAddress = inIface.getIpAddress();
+		}
 		ipPacket.setDestinationAddress(destinationAddress);
 		ipPacket.setSourceAddress(sourceAddress);
 
@@ -415,18 +402,15 @@ public class Router
 		etherPacket.setDestinationMACAddress(destinationMACAddress);
 		etherPacket.setSourceMACAddress(sourceMACAddress);
 		
-//		System.out.println("Error: " + type + " " + code);
 		if (type == (byte) 3 && code == (byte) 1) {
 			for (Iface i : interfaces.values()) {
 				if (i.getMacAddress().equals(new MACAddress(sourceMACAddress))) {
-					ipPacket.setSourceAddress(i.getIpAddress());
+					ipPacket.setSourceAddress(inIface.getIpAddress());
 					etherPacket.setPayload(ipPacket);
-//					System.out.println(etherPacket.toString());
 					sendPacket(etherPacket, i);
 				}
 			}
 		} else {
-//			System.out.println(etherPacket.toString());
 			sendPacket(etherPacket, inIface);
 		}
 	}
