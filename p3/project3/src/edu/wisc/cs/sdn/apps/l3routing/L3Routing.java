@@ -24,6 +24,7 @@ import net.floodlightcontroller.devicemanager.IDeviceService;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryListener;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryService;
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.routing.Link;
 
 import org.openflow.protocol.OFMatch;
@@ -144,34 +145,30 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
     }
     
-    
-    private void addHostIPv4ForwardRule(Host host){		
+    private void addHostIPv4ForwardRule(IOFSwitch sw, int port, Host host){		
 		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
 		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
 				new OFActionSetField(OFOXMFieldType.ETH_DST, Ethernet.toByteArray(host.getMACAddress())),
 				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
 				new OFActionDecrementNwTTL(),
-				new OFActionOutput(host.getPort())
+				new OFActionOutput(port)
 				)));	
 		System.out.println("IPV4 rule installing! Host name:" + host.getName());
-		for(IOFSwitch everySwitch : getSwitches().values()){
-			SwitchCommands.installRule(everySwitch, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByNetworkDest(host.getIPv4Address()), 
-					new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
-		}	
+//		SwitchCommands.removeRules(sw, table, getMatchByNetworkDest(host.getIPv4Address()));
+		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByNetworkDest(host.getIPv4Address()), 
+				new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
     }
     
-    private void addHostMacForwardRule(Host host){
+    private void addHostMacForwardRule(IOFSwitch sw, int port, Host host){
 		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
 		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
 				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
 				new OFActionDecrementNwTTL(),
-				new OFActionOutput(host.getPort()) 
+				new OFActionOutput(port) 
 				)));
 		System.out.println("MAC rule installing! Host name:" + host.getName());
-		for(IOFSwitch everySwitch : getSwitches().values()){
-			SwitchCommands.installRule(everySwitch, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())),
-					new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
-		}	
+		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())),
+				new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
     }
     
     private void deleteHostMacForwardRule(Host host){
@@ -207,9 +204,13 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 			/* TODO: Update routing: add rules to route to new host          */
 			
 			//WYR: 1. directly linked hosts : update MAC address and send it
-			addHostIPv4ForwardRule(host);
+			HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
+			for(IOFSwitch everySwitch : getSwitches().values()){
+				addHostIPv4ForwardRule(everySwitch, switchPathInfo.get(everySwitch.getId()).getSendPort(), host);
+			}
 			//WYR: 2. directly linked hosts : send it by MAC address
-			addHostMacForwardRule(host);
+			
+			addHostMacForwardRule(host.getSwitch(), host.getPort(), host);
 			
 			/*****************************************************************/
 		}
@@ -265,9 +266,12 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		/* TODO: Update routing: change rules to route to host               */
 		
 		//WYR: 1. directly linked hosts : update MAC address and send it
-		addHostIPv4ForwardRule(host);
+		HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
+		for(IOFSwitch everySwitch : getSwitches().values()){
+			addHostIPv4ForwardRule(everySwitch, switchPathInfo.get(everySwitch.getId()).getSendPort(), host);
+		}
 		//WYR: 2. directly linked hosts : send it by MAC address
-		addHostMacForwardRule(host);
+		addHostMacForwardRule(host.getSwitch(), host.getPort(), host);
 		
 		/*********************************************************************/
 	}
@@ -284,7 +288,22 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: change routing rules for all hosts          */
+//		OFMatch ofMatch = new OFMatch();
+//		ofMatch.setDataLayerType(Ethernet.TYPE_IPv4);
+//		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
+//		ofInstructionApplyActions.setActions(Arrays.asList(
+//				//some actions regarding TTL
+//				));
+		//instructions: discard, and reply icmp timeout
+//		SwitchCommands.installRule(getSwitches().get(switchId), table, SwitchCommands.DEFAULT_PRIORITY, ofMatch, new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
 
+		//WYR : 1. new rules for everyone
+		for(Host host : getHosts()){
+			HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
+			for(IOFSwitch everySwitch : getSwitches().values()){
+				addHostIPv4ForwardRule(everySwitch, switchPathInfo.get(everySwitch.getId()).getSendPort(), host);
+			}
+		}
 		/*********************************************************************/
 	}
 
@@ -300,7 +319,12 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: change routing rules for all hosts          */
-		
+		for(Host host : getHosts()){
+			HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
+			for(IOFSwitch everySwitch : getSwitches().values()){
+				addHostIPv4ForwardRule(everySwitch, switchPathInfo.get(everySwitch.getId()).getSendPort(), host);
+			}
+		}
 		/*********************************************************************/
 	}
 
