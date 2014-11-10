@@ -18,12 +18,14 @@ public class BellmanFord {
 		HashMap<Long, PathInfo> switchesPathInfo = new HashMap<Long, PathInfo>();
 		IOFSwitch mySwitch = myHost.getSwitch();
 		
+		//step 1 : init graph
 		for(IOFSwitch iofSwitch : switches){
 			switchesPathInfo.put(iofSwitch.getId(), new PathInfo(iofSwitch.getId(), mySwitch.getId()));
 		}
 		
 		switchesPathInfo.get(mySwitch.getId()).setSendPort(myHost.getPort());
 		
+		//step 2 : relax edges repeatedly
 		for(int i = 0 ; i < switches.size() - 1; i++){
 			for(Link link : links){
 				long u = link.getSrc();
@@ -39,7 +41,16 @@ public class BellmanFord {
 			}
 		}	
 		
+//		step 3 : check for negative-weight cycles
+		for(Link link : links){
+			long u = link.getSrc();
+			long v = link.getDst();
+			if(switchesPathInfo.get(u).getDestination() + DISTANCE < switchesPathInfo.get(v).getDestination()){
+//				throw new NegativeWeightCycleException();
+				System.out.println("Error: Graph contains a negative-weight cycle!!");
+			}
+		}
+		
 		return switchesPathInfo;
 	}
-
 }
