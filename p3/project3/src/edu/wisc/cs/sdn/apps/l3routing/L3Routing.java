@@ -190,7 +190,15 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
     }
     
     private void updateRulesForEveryone(){
+//    	for(IDevice device : deviceProv.getAllDevices()){
+//    		System.out.println(knownHosts.get(device).getName() + " is in the network!");
+//    	}
     	for(Host host : getHosts()){
+    		System.out.println("remove all rules in every switch");
+    		System.out.println("We have host " + host.getName());
+    		deleteHostMacForwardRule(host);
+    		deleteHostIPv4ForwardRule(host);
+    		System.out.println("find path and install new rules");
 			HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
 			for(IOFSwitch everySwitch : getSwitches().values()){
 				if(switchPathInfo.get(everySwitch.getId()).getDistance() != Integer.MAX_VALUE)
@@ -278,10 +286,8 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: change rules to route to host               */
-
 		this.deviceRemoved(device);
 		this.deviceAdded(device);
-		
 		/*********************************************************************/
 	}
 	
@@ -313,10 +319,8 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: change routing rules for all hosts          */
-		for(Host host : getHosts()){
-			System.out.println("Switches for every host " + host.getName() + " - " + host.getSwitch().getId());
-		}
-//		System.out.println("Switch removed! " + sw.getId());
+		System.out.println(getSwitches().values() + " we are switches in network!!!!!");
+
 		updateRulesForEveryone();
 		/*********************************************************************/
 	}
@@ -348,7 +352,11 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: change routing rules for all hosts          */
-		updateRulesForEveryone();
+//		updateRulesForEveryone();
+//		for(LDUpdate linkupdate : updateList){
+//			
+//		}
+		
 		/*********************************************************************/
 	}
 
