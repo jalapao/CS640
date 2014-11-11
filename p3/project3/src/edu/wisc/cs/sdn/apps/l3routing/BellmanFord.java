@@ -28,24 +28,24 @@ public class BellmanFord {
 		//step 2 : relax edges repeatedly
 		for(int i = 0 ; i < switches.size() - 1; i++){
 			for(Link link : links){
-				long u = link.getSrc();
-				long v = link.getDst();
+				long u = link.getDst();
+				long v = link.getSrc();
 				if(switchesPathInfo.get(u).getDistance() == Integer.MAX_VALUE){
 					continue;
 				}else if(switchesPathInfo.get(u).getDistance() + DISTANCE < 0){
 					continue;
 				}else if(switchesPathInfo.get(u).getDistance() + DISTANCE < switchesPathInfo.get(v).getDistance()){
 					switchesPathInfo.get(v).setDistance(switchesPathInfo.get(u).getDistance() + DISTANCE);
-					switchesPathInfo.get(v).setSendPort(link.getDstPort());
+					switchesPathInfo.get(v).setSendPort(link.getSrcPort());
 				}
 			}
 		}	
 		
 //		step 3 : check for negative-weight cycles
 		for(Link link : links){
-			long u = link.getSrc();
-			long v = link.getDst();
-			if(switchesPathInfo.get(u).getDestination() + DISTANCE < switchesPathInfo.get(v).getDestination()){
+			long u = link.getDst();
+			long v = link.getSrc();
+			if(switchesPathInfo.get(u).getDistance() + DISTANCE < switchesPathInfo.get(v).getDistance()){
 //				throw new NegativeWeightCycleException();
 				System.out.println("Error: Graph contains a negative-weight cycle!!");
 			}
