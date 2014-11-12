@@ -22,6 +22,7 @@ import net.floodlightcontroller.devicemanager.IDevice;
 import net.floodlightcontroller.devicemanager.IDeviceService;
 import net.floodlightcontroller.devicemanager.internal.DeviceManagerImpl;
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.util.MACAddress;
 
 import org.openflow.protocol.OFMatch;
@@ -158,12 +159,13 @@ public class LoadBalancer implements IFloodlightModule, IOFSwitchListener,
 			OFMatch ofMatchVirBalancer = new OFMatch();
 			ofMatchVirBalancer.setDataLayerType(Ethernet.TYPE_IPv4);
 			ofMatchVirBalancer.setNetworkDestination(vipAddress);
-			
+			ofMatchVirBalancer.setNetworkProtocol(IPv4.PROTOCOL_TCP);
 			SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY, ofMatchVirBalancer, instructionSendToController);
 		}
 		
 		//(3)
-		//TODO multiple table 
+		
+		
 		/*********************************************************************/
 	}
 	

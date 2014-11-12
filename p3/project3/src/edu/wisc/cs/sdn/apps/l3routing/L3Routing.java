@@ -134,13 +134,6 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
     { return linkDiscProv.getLinks().keySet(); }
     
     
-    private Collection<Host> getCurrentHosts()
-    { return this.currentHosts.values(); }
- 
-    private void removeHost(IDevice device){
-    	this.currentHosts.remove(device);
-    }
-    
     private OFMatch getMatchByNetworkDest(int destIpv4Address){
 		OFMatch ofMatch = new OFMatch();
 		ofMatch.setDataLayerType(Ethernet.TYPE_IPv4);
@@ -148,48 +141,40 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		return ofMatch;
     }
     
-    private OFMatch getMatchByMacDest(byte[] destMacAddress){
-		OFMatch ofMatch = new OFMatch();
-		ofMatch.setDataLayerDestination(destMacAddress);
-		return ofMatch;
-		
-    }
+//    private OFMatch getMatchByMacDest(byte[] destMacAddress){
+//		OFMatch ofMatch = new OFMatch();
+//		ofMatch.setDataLayerDestination(destMacAddress);
+//		return ofMatch;
+//		
+//    }
    
     
-    private void addHostMacForwardRule(IOFSwitch sw, int port, Host host){
-		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
-		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
-				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
-//				new OFActionDecrementNwTTL(),
-				new OFActionOutput(port) 
-				)));
-//		System.out.println("MAC rule installing! Host name:" + host.getName());
-		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())),
-				new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
-    }
+//    private void addHostMacForwardRule(IOFSwitch sw, int port, Host host){
+//		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
+//		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
+////				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
+//				new OFActionOutput(port) 
+//				)));
+//		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())),
+//				new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
+//    }
     
-    private void deleteHostMacForwardRule(Host host){
-//    	System.out.println("MAC rule removing! Host name:" + host.getName());
-		for(IOFSwitch everySwitch : getSwitches().values()){
-			SwitchCommands.removeRules(everySwitch, table, getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())));
-		}
-    }
+//    private void deleteHostMacForwardRule(Host host){
+//		for(IOFSwitch everySwitch : getSwitches().values()){
+//			SwitchCommands.removeRules(everySwitch, table, getMatchByMacDest(Ethernet.toByteArray(host.getMACAddress())));
+//		}
+//    }
     
     private void addHostIPv4ForwardRule(IOFSwitch sw, int port, Host host){		
 		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
 		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
-				new OFActionSetField(OFOXMFieldType.ETH_DST, Ethernet.toByteArray(host.getMACAddress())),
-				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
-//				new OFActionDecrementNwTTL(),
 				new OFActionOutput(port)
 				)));	
-//		System.out.println("IPV4 rule installing! Host name:" + host.getName());
 		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByNetworkDest(host.getIPv4Address()), 
 				new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)));
     }
     
     private void deleteHostIPv4ForwardRule(Host host){
-//    	System.out.println("IPV4 rule removing! Host name:" + host.getName());
 		for(IOFSwitch everySwitch : getSwitches().values()){
 			SwitchCommands.removeRules(everySwitch, table, getMatchByNetworkDest(host.getIPv4Address()));
 		}
@@ -204,8 +189,11 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 			HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
 			for(IOFSwitch everySwitch : getSwitches().values()){
 				if(switchPathInfo.get(everySwitch.getId()) != null){
-					if(switchPathInfo.get(everySwitch.getId()).getDistance() != Integer.MAX_VALUE)
-						addHostIPv4ForwardRule(everySwitch, switchPathInfo.get(everySwitch.getId()).getSendPort(), host);
+					if(switchPathInfo.get(everySwitch.getId()).getDistance() != Integer.MAX_VALUE){
+						int portToSend = switchPathInfo.get(everySwitch.getId()).getSendPort();
+						if(portToSend > 0)
+							addHostIPv4ForwardRule(everySwitch, portToSend, host);
+					}
 				}
 			}
 		}
@@ -227,20 +215,18 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 			
 			/*****************************************************************/
 			/* TODO: Update routing: add rules to route to new host          */
-//			this.currentHosts.put(device, host);
-			
 			//WYR: 1. directly linked hosts : update MAC address and send it
 			HashMap<Long, PathInfo> switchPathInfo = BellmanFord.getShortestPath(getSwitches().values(), getLinks(), host);
 			
 			for(IOFSwitch everySwitch : getSwitches().values()){
 				if(switchPathInfo.get(everySwitch.getId()) != null){
-					if(switchPathInfo.get(everySwitch.getId()).getDistance() != Integer.MAX_VALUE)
-						addHostIPv4ForwardRule(everySwitch, switchPathInfo.get(everySwitch.getId()).getSendPort(), host);
+					if(switchPathInfo.get(everySwitch.getId()).getDistance() != Integer.MAX_VALUE){
+						int portToSend = switchPathInfo.get(everySwitch.getId()).getSendPort();
+						if(portToSend > 0)
+							addHostIPv4ForwardRule(everySwitch, portToSend, host);
+					}
 				}
 			}
-			//WYR: 2. directly linked hosts : send it by MAC address
-//			addHostMacForwardRule(host.getSwitch(), host.getPort(), host);
-			
 			/*****************************************************************/
 		}
 	}
@@ -264,9 +250,7 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 		
 		/*********************************************************************/
 		/* TODO: Update routing: remove rules to route to host               */
-//		removeHost(device);
 		deleteHostIPv4ForwardRule(host);
-//		deleteHostMacForwardRule(host);
 		/*********************************************************************/
 	}
 
