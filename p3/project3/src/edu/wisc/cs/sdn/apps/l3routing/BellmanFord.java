@@ -16,27 +16,41 @@ public class BellmanFord {
 	
 	public static HashMap<Long, PathInfo> getShortestPath(Collection<IOFSwitch> switches, Collection<Link> links, Host myHost){
 		HashMap<Long, PathInfo> switchesPathInfo = new HashMap<Long, PathInfo>();
+		
 		IOFSwitch mySwitch = myHost.getSwitch();
 		
-		//step 1 : init graph
-		for(IOFSwitch iofSwitch : switches){
-			switchesPathInfo.put(iofSwitch.getId(), new PathInfo(iofSwitch.getId(), mySwitch.getId()));
+		if(mySwitch == null){
+			System.out.println("mySwitch is null!!!");
+//			return switchesPathInfo;
 		}
 		
-		switchesPathInfo.get(mySwitch.getId()).setSendPort(myHost.getPort());
+		//step 1 : init graph
+		for(IOFSwitch iofSwitch : switches){	
+			//actual work
+			if(mySwitch != null){
+				PathInfo pathInfo = new PathInfo(iofSwitch.getId(), mySwitch.getId());
+				switchesPathInfo.put(iofSwitch.getId(), pathInfo);
+			}		
+		}
+		
+		if(mySwitch != null)
+			switchesPathInfo.get(mySwitch.getId()).setSendPort(myHost.getPort());
 		
 		//step 2 : relax edges repeatedly
 		for(int i = 0 ; i < switches.size() - 1; i++){
 			for(Link link : links){
 				long u = link.getDst();
 				long v = link.getSrc();
-				if(switchesPathInfo.get(u).getDistance() == Integer.MAX_VALUE){
-					continue;
-				}else if(switchesPathInfo.get(u).getDistance() + DISTANCE < 0){
-					continue;
-				}else if(switchesPathInfo.get(u).getDistance() + DISTANCE < switchesPathInfo.get(v).getDistance()){
-					switchesPathInfo.get(v).setDistance(switchesPathInfo.get(u).getDistance() + DISTANCE);
-					switchesPathInfo.get(v).setSendPort(link.getSrcPort());
+				
+				if((switchesPathInfo.get(u) !=  null) && (switchesPathInfo.get(v) != null)){
+					if(switchesPathInfo.get(u).getDistance() == Integer.MAX_VALUE){
+						continue;
+					}else if(switchesPathInfo.get(u).getDistance() + DISTANCE < 0){
+						continue;
+					}else if(switchesPathInfo.get(u).getDistance() + DISTANCE < switchesPathInfo.get(v).getDistance()){
+						switchesPathInfo.get(v).setDistance(switchesPathInfo.get(u).getDistance() + DISTANCE);
+						switchesPathInfo.get(v).setSendPort(link.getSrcPort());
+					}
 				}
 			}
 		}	
@@ -45,9 +59,11 @@ public class BellmanFord {
 		for(Link link : links){
 			long u = link.getDst();
 			long v = link.getSrc();
-			if(switchesPathInfo.get(u).getDistance() + DISTANCE < switchesPathInfo.get(v).getDistance()){
-//				throw new NegativeWeightCycleException();
-				System.out.println("Error: Graph contains a negative-weight cycle!!");
+			if((switchesPathInfo.get(u) !=  null) && (switchesPathInfo.get(v) != null)){
+				if(switchesPathInfo.get(u).getDistance() + DISTANCE < switchesPathInfo.get(v).getDistance()){
+	//				throw new NegativeWeightCycleException();
+					System.out.println("Error: Graph contains a negative-weight cycle!!");
+				}
 			}
 		}
 		

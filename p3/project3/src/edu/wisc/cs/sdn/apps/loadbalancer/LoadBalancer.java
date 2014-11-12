@@ -1,25 +1,17 @@
 package edu.wisc.cs.sdn.apps.loadbalancer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPacketIn;
-import org.openflow.protocol.OFType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import edu.wisc.cs.sdn.apps.l3routing.IL3Routing;
-import edu.wisc.cs.sdn.apps.util.ArpServer;
-
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.IOFMessageListener;
-import net.floodlightcontroller.core.IOFSwitch.PortChangeType;
 import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.core.IOFSwitch.PortChangeType;
 import net.floodlightcontroller.core.IOFSwitchListener;
 import net.floodlightcontroller.core.ImmutablePort;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
@@ -31,6 +23,22 @@ import net.floodlightcontroller.devicemanager.IDeviceService;
 import net.floodlightcontroller.devicemanager.internal.DeviceManagerImpl;
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.util.MACAddress;
+
+import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.OFMessage;
+import org.openflow.protocol.OFPacketIn;
+import org.openflow.protocol.OFPort;
+import org.openflow.protocol.OFType;
+import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionOutput;
+import org.openflow.protocol.instruction.OFInstruction;
+import org.openflow.protocol.instruction.OFInstructionApplyActions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import edu.wisc.cs.sdn.apps.l3routing.IL3Routing;
+import edu.wisc.cs.sdn.apps.util.ArpServer;
+import edu.wisc.cs.sdn.apps.util.SwitchCommands;
 
 public class LoadBalancer implements IFloodlightModule, IOFSwitchListener,
 		IOFMessageListener
@@ -57,7 +65,7 @@ public class LoadBalancer implements IFloodlightModule, IOFSwitchListener,
     private byte table;
     
     // Set of virtual IPs and the load balancer instances they correspond with
-    private Map<Integer,LoadBalancerInstance> instances;
+    private Map<Integer, LoadBalancerInstance> instances;
 
     /**
      * Loads dependencies and initializes data structures.
@@ -134,6 +142,28 @@ public class LoadBalancer implements IFloodlightModule, IOFSwitchListener,
 		/*       (2) ARP packets to the controller, and                      */
 		/*       (3) all other packets to the next rule table in the switch  */
 		
+		//(2) ARP
+		OFMatch ofMatchArp = new OFMatch();
+		ofMatchArp.setDataLayerType(Ethernet.TYPE_ARP);
+		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
+		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
+				new OFActionOutput(OFPort.OFPP_CONTROLLER)
+		)));
+		ArrayList<OFInstruction> instructionSendToController = new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions));
+		
+		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY, ofMatchArp, instructionSendToController);
+		
+		//(1) 
+		for(Integer vipAddress : instances.keySet()){
+			OFMatch ofMatchVirBalancer = new OFMatch();
+			ofMatchVirBalancer.setDataLayerType(Ethernet.TYPE_IPv4);
+			ofMatchVirBalancer.setNetworkDestination(vipAddress);
+			
+			SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY, ofMatchVirBalancer, instructionSendToController);
+		}
+		
+		//(3)
+		//TODO multiple table 
 		/*********************************************************************/
 	}
 	
@@ -164,6 +194,8 @@ public class LoadBalancer implements IFloodlightModule, IOFSwitchListener,
 		/*       connection-specific rules to rewrite IP and MAC addresses;  */
 		/*       for all other TCP packets sent to a virtual IP, send a TCP  */
 		/*       reset; ignore all other packets                             */
+		
+		
 		
 		/*********************************************************************/
 		
