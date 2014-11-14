@@ -168,6 +168,8 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
     private void addHostIPv4ForwardRule(IOFSwitch sw, int port, Host host){		
 		OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
 		ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
+				new OFActionSetField(OFOXMFieldType.ETH_DST, Ethernet.toByteArray(host.getMACAddress())),
+				new OFActionSetField(OFOXMFieldType.ETH_SRC, host.getSwitch().getPort(host.getPort()).getHardwareAddress()), 
 				new OFActionOutput(port)
 				)));	
 		SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY , getMatchByNetworkDest(host.getIPv4Address()), 
@@ -336,7 +338,7 @@ public class L3Routing implements IFloodlightModule, IOFSwitchListener,
 			// Otherwise, the link is between two switches
 			else
 			{
-				log.info(String.format("Link s%s:%d -> s%s:%d updated", 
+				log.info(String.format("Link s%s:%d -> %s:%d updated", 
 					update.getSrc(), update.getSrcPort(),
 					update.getDst(), update.getDstPort()));
 			}

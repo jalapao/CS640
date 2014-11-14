@@ -74,7 +74,6 @@ IOFMessageListener
 	// Set of virtual IPs and the load balancer instances they correspond with
 	private Map<Integer, LoadBalancerInstance> instances;
 	
-
 	/**
 	 * Loads dependencies and initializes data structures.
 	 */
@@ -170,7 +169,7 @@ IOFMessageListener
 			SwitchCommands.installRule(sw, table, SwitchCommands.DEFAULT_PRIORITY, ofMatchVirBalancer, instructionSendToController);
 			
 			OFMatch ofMatchOther = new OFMatch();
-			SwitchCommands.installRule(sw, table, SwitchCommands.MIN_PRIORITY, ofMatchOther, new ArrayList<OFInstruction>(Arrays.asList(
+			SwitchCommands.installRule(sw, table, (short)(SwitchCommands.DEFAULT_PRIORITY - 1), ofMatchOther, new ArrayList<OFInstruction>(Arrays.asList(
 					new OFInstructionGotoTable(l3RoutingApp.getTable())
 					)));
 		}
@@ -251,14 +250,37 @@ IOFMessageListener
 						ofMatchRewrite.setTransportDestination(tcpPkt.getDestinationPort());
 						ofMatchRewrite.setTransportSource(tcpPkt.getSourcePort());
 						
+						int ipToSend = instances.get(targetIP).getNextHostIP();
 						
 						OFInstructionApplyActions ofInstructionApplyActions = new OFInstructionApplyActions();
 						ofInstructionApplyActions.setActions(new ArrayList<OFAction>(Arrays.asList(
 //								new OFActionSetField(OFOXMFieldType.ETH_DST, selectedMAcDst),
-								new OFActionSetField(OFOXMFieldType.IPV4_DST, instances.get(targetIP).getNextHostIP())
+								new OFActionSetField(OFOXMFieldType.IPV4_DST, ipToSend)
 										)));
-						SwitchCommands.installRule(sw, table, SwitchCommands.MAX_PRIORITY, ofMatchRewrite, 
-								new ArrayList<OFInstruction>(Arrays.asList(ofInstructionApplyActions)), 
+						SwitchCommands.installRule(sw, table, (short)(SwitchCommands.DEFAULT_PRIORITY + 1), ofMatchRewrite, 
+								new ArrayList<OFInstruction>(Arrays.asList(
+										ofInstructionApplyActions,
+										new OFInstructionGotoTable(l3RoutingApp.getTable())
+										)), 
+								SwitchCommands.NO_TIMEOUT, IDLE_TIMEOUT);
+						
+						
+						OFMatch ofMatchRewriteBack = new OFMatch();
+						ofMatchRewriteBack.setDataLayerType(Ethernet.TYPE_IPv4);
+						ofMatchRewriteBack.setNetworkDestination(ipPacket.getSourceAddress());
+						ofMatchRewriteBack.setNetworkSource(ipToSend);
+						ofMatchRewriteBack.setNetworkProtocol(IPv4.PROTOCOL_TCP);
+						ofMatchRewriteBack.setTransportDestination(tcpPkt.getSourcePort());
+						ofMatchRewriteBack.setTransportSource(tcpPkt.getDestinationPort());
+						
+						OFInstructionApplyActions ofInstructionApplyActionsBack = new OFInstructionApplyActions();
+						ofInstructionApplyActionsBack.setActions(new ArrayList<OFAction>(Arrays.asList(
+								new OFActionSetField(OFOXMFieldType.IPV4_SRC, ipPacket.getDestinationAddress())
+						)));
+						SwitchCommands.installRule(sw, table, (short)(SwitchCommands.DEFAULT_PRIORITY + 1), ofMatchRewriteBack, new ArrayList<OFInstruction>(Arrays.asList(
+								ofInstructionApplyActionsBack,
+								new OFInstructionGotoTable(l3RoutingApp.getTable())
+								)),
 								SwitchCommands.NO_TIMEOUT, IDLE_TIMEOUT);
 					}else{
 						//send a TCP reset
@@ -278,6 +300,8 @@ IOFMessageListener
 						ethernet.setEtherType(Ethernet.TYPE_IPv4);
 						ethernet.setSourceMACAddress(ethPkt.getDestinationMACAddress());
 						ethernet.setDestinationMACAddress(ethPkt.getSourceMACAddress());
+						//print!!!
+						System.out.println(ethernet);
 						SwitchCommands.sendPacket(sw, (short)pktIn.getInPort(), ethernet);
 					}
 				}
