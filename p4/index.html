@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<body>
+	<h1>CS 640 Program 4</h1>
+
+	<hr>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+	<script type="application/javascript">
+	var lat, lon;
+	function getgeoip(json) {
+		lat = json.latitude;
+		lon = json.longitude;
+		document.write("Location determined by IP (", json.ip, ")", "<br>");
+		document.write("Latitude: ", lat, "<br>");
+		document.write("Longitude: ", lon, "<br>");
+	}
+
+	$(document).ready(function() {
+	$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&callback=?",
+		function(json) {
+			document.getElementById("geo-weather").innerHTML = "Nearby weather:" + "<br>";
+			var temp = json.main.temp - 273.15;
+    		document.getElementById("geo-temp").innerHTML = "Temperature: " + temp + "<br>";
+    		document.getElementById("geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
+		}
+	);
+    });
+	</script>
+	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
+	<br>
+	<p id="geo-weather" style="display:inline"></p>
+	<p id="geo-temp" style="display:inline"></p>
+	<p id="geo-wind" style="display:inline"></p>
+
+	<hr>
+	<p id="browser-geo-lat" style="display:inline"></p>
+	<p id="browser-geo-lng" style="display:inline"></p>
+	<br>
+	<p id="browser-geo-weather" style="display:inline"></p>
+	<p id="browser-geo-temp" style="display:inline"></p>
+	<p id="browser-geo-wind" style="display:inline"></p>
+	<script>
+	navigator.geolocation.getCurrentPosition(showMap);
+	var lat, lon;
+	function showMap(position) {
+		lat = position.coords.latitude;
+		lon = position.coords.longitude;
+		document.getElementById("browser-geo-lat").innerHTML = "Latitude: " + lat + "<br>";
+		document.getElementById("browser-geo-lng").innerHTML = "Longitude: " + lon +"<br>";
+	}
+
+	$(document).ready(function() {
+	$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&callback=?",
+		function(json) {
+			document.getElementById("browser-geo-weather").innerHTML = "Nearby weather:" + "<br>";
+			var temp = json.main.temp - 273.15;
+    		document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + temp + "<br>";
+    		document.getElementById("browser-geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
+		}
+	);
+    });
+	</script>
+
+</body>
+</html>
