@@ -49,7 +49,7 @@
 		getbrowserweather(browserlat, browserlon);
 	}
 
-	function getbrowserweather(geolat, geolon) {
+	function getbrowserweather(browserlat, browserlon) {
 		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + browserlat + "&lon=" + browserlon, function(json) {
 			document.getElementById("browser-geo-weather").innerHTML = "Nearby weather:" + "<br>";
 			document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "<br>";
