@@ -8,7 +8,6 @@
 </head>
 <body>
 	<h1>CS 640 Program 4</h1>
-
 	<hr>
 	<script type="application/javascript">
 	var lat, lon;
@@ -19,31 +18,24 @@
 		document.write("Latitude: ", lat, "<br>");
 		document.write("Longitude: ", lon, "<br>");
 		getweather(lat, lon);
+		getbusstops(lat, lon);
 	}
-
 	function getweather(lat, lon) {
 		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon, function(json) {
 			document.getElementById("geo-weather").innerHTML = "Nearby weather:" + "<br>";
-			document.getElementById("geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "<br>";
-			document.getElementById("geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
+			document.getElementById("geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "C<br>";
+			document.getElementById("geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "mps<br>";
 		});
 	};
-	</script>
-	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
-
-	<br>
-	<p id="geo-weather" style="display:inline"></p>
-	<p id="geo-temp" style="display:inline"></p>
-	<p id="geo-wind" style="display:inline"></p>
-
-	<hr>
-	<p id="browser-geo-lat" style="display:inline"></p>
-	<p id="browser-geo-lng" style="display:inline"></p>
-	<br>
-	<p id="browser-geo-weather" style="display:inline"></p>
-	<p id="browser-geo-temp" style="display:inline"></p>
-	<p id="browser-geo-wind" style="display:inline"></p>
-	<script>
+	function getbusstops(lat, lon) {
+		$.getJSON("http://api.smsmybus.com/v1/getnearbystops?key=uwcompsci&lat=" + lat + "&lon=" + lon + "&callback=?", function(json) {
+			for (var i = 0; i < json.stop.length; i++) {
+				var newParagraph = document.createElement('p');
+				newParagraph.innerHTML += "Stop ID: " + json.stop[i].stopID + "<br>" + "Intersection: " + json.stop[i].intersection + "<br>";
+				document.getElementById("updateDiv").appendChild(newParagraph);
+			}
+		});
+	};
 	navigator.geolocation.getCurrentPosition(showMap);
 	var browserlat, browserlon;
 	function showMap(position) {
@@ -53,15 +45,26 @@
 		document.getElementById("browser-geo-lng").innerHTML = "Longitude: " + browserlon +"<br>";
 		getbrowserweather(browserlat, browserlon);
 	}
-
 	function getbrowserweather(browserlat, browserlon) {
 		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + browserlat + "&lon=" + browserlon, function(json) {
 			document.getElementById("browser-geo-weather").innerHTML = "Nearby weather:" + "<br>";
-			document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "<br>";
-			document.getElementById("browser-geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
+			document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "C<br>";
+			document.getElementById("browser-geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "mps<br>";
 		});
 	};
 	</script>
-
+	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
+	<br>
+	<p id="geo-weather" style="display:inline"></p>
+	<p id="geo-temp" style="display:inline"></p>
+	<p id="geo-wind" style="display:inline"></p>
+	<div id='updateDiv'></div> 
+	<hr>
+	<p id="browser-geo-lat" style="display:inline"></p>
+	<p id="browser-geo-lng" style="display:inline"></p>
+	<br>
+	<p id="browser-geo-weather" style="display:inline"></p>
+	<p id="browser-geo-temp" style="display:inline"></p>
+	<p id="browser-geo-wind" style="display:inline"></p>
 </body>
 </html>
