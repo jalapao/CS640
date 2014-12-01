@@ -13,20 +13,19 @@
 		document.write("Location determined by IP (", json.ip, ")", "<br>");
 		document.write("Latitude: ", lat, "<br>");
 		document.write("Longitude: ", lon, "<br>");
+		getweather(lat, lon);
 	}
 
-	$(document).ready(function() {
-	$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&callback=?",
-		function(json) {
+	function getweather(lat, lon) {
+		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon, function(json) {
 			document.getElementById("geo-weather").innerHTML = "Nearby weather:" + "<br>";
-			var temp = json.main.temp - 273.15;
-    		document.getElementById("geo-temp").innerHTML = "Temperature: " + temp + "<br>";
-    		document.getElementById("geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
-		}
-	);
-    });
+			document.getElementById("geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "<br>";
+			document.getElementById("geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
+		});
+	};
 	</script>
 	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
+	
 	<br>
 	<p id="geo-weather" style="display:inline"></p>
 	<p id="geo-temp" style="display:inline"></p>
@@ -41,24 +40,22 @@
 	<p id="browser-geo-wind" style="display:inline"></p>
 	<script>
 	navigator.geolocation.getCurrentPosition(showMap);
-	var lat, lon;
+	var browserlat, browserlon;
 	function showMap(position) {
-		lat = position.coords.latitude;
-		lon = position.coords.longitude;
-		document.getElementById("browser-geo-lat").innerHTML = "Latitude: " + lat + "<br>";
-		document.getElementById("browser-geo-lng").innerHTML = "Longitude: " + lon +"<br>";
+		browserlat = position.coords.latitude;
+		browserlon = position.coords.longitude;
+		document.getElementById("browser-geo-lat").innerHTML = "Latitude: " + browserlat + "<br>";
+		document.getElementById("browser-geo-lng").innerHTML = "Longitude: " + browserlon +"<br>";
+		getbrowserweather(browserlat, browserlon);
 	}
 
-	$(document).ready(function() {
-	$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&callback=?",
-		function(json) {
+	function getbrowserweather(geolat, geolon) {
+		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + browserlat + "&lon=" + browserlon, function(json) {
 			document.getElementById("browser-geo-weather").innerHTML = "Nearby weather:" + "<br>";
-			var temp = json.main.temp - 273.15;
-    		document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + temp + "<br>";
-    		document.getElementById("browser-geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
-		}
-	);
-    });
+			document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "<br>";
+			document.getElementById("browser-geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "<br>";
+		});
+	};
 	</script>
 
 </body>
