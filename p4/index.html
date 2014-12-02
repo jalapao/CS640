@@ -12,18 +12,25 @@
 	<div id='updateDiv'></div>
 	<div id='updateBrowserDiv'></div>
 	<div id='updateDistance'></div>
+	<div id='updateTime'></div>
 	<script type="application/javascript">
-	function getgeoip(json) {
-		var lat = json.latitude;
-		var lon = json.longitude;
-		var newParagraph = document.createElement('p');
-		newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
-		newParagraph.innerHTML += "Latitude: " + lat + "<br>";
-		newParagraph.innerHTML += "Longitude: " + lon + "<br>";
-		document.getElementById("updateDiv").appendChild(newParagraph);
-		getWeather(lat, lon, "updateDiv");
-		getBrowserIp(lat, lon);
-	};
+	$(document).ready(function() {
+		var start = performance.now();
+		$.getJSON("http://www.telize.com/geoip?callback=?", function(json) {
+			var end = performance.now();
+				var lat = json.latitude;
+				var lon = json.longitude;
+				var newParagraph = document.createElement('p');
+				newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
+				newParagraph.innerHTML += "Latitude: " + lat + "<br>";
+				newParagraph.innerHTML += "Longitude: " + lon + "<br>";
+				newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
+				document.getElementById("updateDiv").appendChild(newParagraph);
+				getWeather(lat, lon, "updateDiv");
+				getBrowserIp(lat, lon);
+			}
+			);
+	});
 	function getBrowserIp(lat, lon) {
 		navigator.geolocation.getCurrentPosition(showMap);
 		function showMap(position) {
@@ -43,20 +50,25 @@
 		};
 	};
 	function getWeather(lat, lon, div) {
+		var start = performance.now();
 		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon, function(json) {
+			var end = performance.now();
 			var newParagraph = document.createElement('p');
 			newParagraph.innerHTML += "Nearby weather:" + "<br>";
 			newParagraph.innerHTML += "Temperature: " + (json.main.temp - 273.15) + " °C<br>";
 			newParagraph.innerHTML += "Wind speed: " + json.wind.speed + " m/s<br>";
+			newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
 			document.getElementById(div).appendChild(newParagraph);
 			getBusStops(lat, lon, div);
 		});
 	};
 	function getBusStops(lat, lon, div) {
+		var start = performance.now();
 		$.getJSON("http://api.smsmybus.com/v1/getnearbystops?key=uwcompsci&lat=" + lat + "&lon=" + lon + "&callback=?", function(json) {
+			var end = performance.now();
 			var newParagraph = document.createElement('p');
 			if (json.stop.length == 0) {
-				newParagraph.innerHTML += "No bus stops available nearby!";
+				newParagraph.innerHTML += "No bus stops available nearby!<br>";
 			} else {
 				if (json.stop.length == 1) {
 					newParagraph.innerHTML += "1 bus stop available nearby!<br>";
@@ -67,6 +79,7 @@
 					newParagraph.innerHTML += "Stop ID: " + json.stop[i].stopID + "<br>" + "Intersection: " + json.stop[i].intersection + "<br>";
 				}
 			}
+			newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
 			document.getElementById(div).appendChild(newParagraph);
 		});
 	};
@@ -79,12 +92,12 @@
 			var R = 6371;
 			var φ1 = lat * Math.PI / 180;
 			var φ2 = browserlat * Math.PI / 180;
-			var Δφ = (browserlat-lat) * Math.PI / 180;
-			var Δλ = (browserlon-lon) * Math.PI / 180;
-			var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+			var Δφ = (browserlat - lat) * Math.PI / 180;
+			var Δλ = (browserlon - lon) * Math.PI / 180;
+			var a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
 			Math.cos(φ1) * Math.cos(φ2) *
-			Math.sin(Δλ/2) * Math.sin(Δλ/2);
-			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+			Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 			var d = R * c;
 			newParagraph.innerHTML += "Distance: " + d + " km<br>";
 		} else {
@@ -93,9 +106,21 @@
 		document.getElementById("updateDistance").appendChild(header);
 		document.getElementById("updateDistance").appendChild(hr);
 		document.getElementById("updateDistance").appendChild(newParagraph);
+		getTime();
+	};
+	function getTime() {
+		var header = document.createElement('h1');
+		var hr = document.createElement('hr');
+		header.innerHTML += "Time";
+		var newParagraph = document.createElement('p');
+		newParagraph.innerHTML += "Page fetch time: " + (performance.timing.responseEnd - performance.timing.fetchStart) + " ms<br>";
+		newParagraph.innerHTML += "Page render time: " + (performance.timing.domComplete - performance.timing.domLoading) + " ms<br>";
+		newParagraph.innerHTML += "Fetch render gap: " + (performance.timing.domLoading - performance.timing.responseEnd) + " ms<br>";
+		newParagraph.innerHTML += "Total time: " + (performance.timing.domComplete - performance.timing.fetchStart) + " ms<br>";
+		document.getElementById("updateTime").appendChild(header);
+		document.getElementById("updateTime").appendChild(hr);
+		document.getElementById("updateTime").appendChild(newParagraph);
 	};
 	</script>
-	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
-</body>
 </html>
 
