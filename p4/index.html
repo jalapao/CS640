@@ -18,9 +18,8 @@
 	<div id='updateDistance'></div>
 	<script type="application/javascript">
 	function getgeoip(json) {
-		var lat, lon;
-		lat = json.latitude;
-		lon = json.longitude;
+		var lat = json.latitude;
+		var lon = json.longitude;
 		var newParagraph = document.createElement('p');
 		newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
 		newParagraph.innerHTML += "Latitude: " + lat + "<br>";
@@ -28,21 +27,20 @@
 		document.getElementById("updateDiv").appendChild(newParagraph);
 		getWeather(lat, lon, "updateDiv");
 		getBrowserIp(lat, lon);
-	}
+	};
 	function getBrowserIp(lat, lon) {
 		navigator.geolocation.getCurrentPosition(showMap);
 		function showMap(position) {
-			var browserlat, browserlon;
-			browserlat = position.coords.latitude;
-			browserlon = position.coords.longitude;
+			var browserlat = position.coords.latitude;
+			var browserlon = position.coords.longitude;
 			var newParagraph = document.createElement('p');
 			newParagraph.innerHTML += "Latitude: " + browserlat + "<br>";
 			newParagraph.innerHTML += "Longitude: " + browserlon +"<br>";
 			document.getElementById("updateBrowserDiv").appendChild(newParagraph);
 			getWeather(browserlat, browserlon, "updateBrowserDiv");
 			getDistance(lat, lon, browserlat, browserlon);
-		}
-	}
+		};
+	};
 	function getWeather(lat, lon, div) {
 		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon, function(json) {
 			var newParagraph = document.createElement('p');
@@ -59,7 +57,11 @@
 			if (json.stop.length == 0) {
 				newParagraph.innerHTML += "No bus stops available nearby!";
 			} else {
-				newParagraph.innerHTML += json.stop.length + " bus stop(s) available nearby!<br>";
+				if (json.stop.length == 1) {
+					newParagraph.innerHTML += "1 bus stop available nearby!<br>";
+				} else {
+					newParagraph.innerHTML += json.stop.length + " bus stops available nearby!<br>";
+				}
 				for (var i = 0; i < json.stop.length; i++) {
 					newParagraph.innerHTML += "Stop ID: " + json.stop[i].stopID + "<br>" + "Intersection: " + json.stop[i].intersection + "<br>";
 				}
@@ -86,7 +88,7 @@
 			newParagraph.innerHTML += "N/A<br>";
 			document.getElementById("updateDistance").appendChild(newParagraph);
 		}
-	}
+	};
 	</script>
 	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
 </body>
