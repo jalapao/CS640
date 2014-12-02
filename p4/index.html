@@ -7,64 +7,87 @@
 	<link rel="icon" type="image/icon" href="/favicon.ico"/>
 </head>
 <body>
-	<h1>CS 640 Program 4</h1>
+	<h1>IP Data</h1>
 	<hr>
+	<div id='updateDiv'></div>
+	<h1>Device Data</h1>
+	<hr>
+	<div id='updateBrowserDiv'></div>
+	<h1>Distance</h1>
+	<hr>
+	<div id='updateDistance'></div>
 	<script type="application/javascript">
-	var lat, lon;
 	function getgeoip(json) {
+		var lat, lon;
 		lat = json.latitude;
 		lon = json.longitude;
-		document.write("Location determined by IP (", json.ip, ")", "<br>");
-		document.write("Latitude: ", lat, "<br>");
-		document.write("Longitude: ", lon, "<br>");
-		getweather(lat, lon);
-		getbusstops(lat, lon);
+		var newParagraph = document.createElement('p');
+		newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
+		newParagraph.innerHTML += "Latitude: " + lat + "<br>";
+		newParagraph.innerHTML += "Longitude: " + lon + "<br>";
+		document.getElementById("updateDiv").appendChild(newParagraph);
+		getWeather(lat, lon, "updateDiv");
+		getBrowserIp(lat, lon);
 	}
-	function getweather(lat, lon) {
+	function getBrowserIp(lat, lon) {
+		navigator.geolocation.getCurrentPosition(showMap);
+		function showMap(position) {
+			var browserlat, browserlon;
+			browserlat = position.coords.latitude;
+			browserlon = position.coords.longitude;
+			var newParagraph = document.createElement('p');
+			newParagraph.innerHTML += "Latitude: " + browserlat + "<br>";
+			newParagraph.innerHTML += "Longitude: " + browserlon +"<br>";
+			document.getElementById("updateBrowserDiv").appendChild(newParagraph);
+			getWeather(browserlat, browserlon, "updateBrowserDiv");
+			getDistance(lat, lon, browserlat, browserlon);
+		}
+	}
+	function getWeather(lat, lon, div) {
 		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon, function(json) {
-			document.getElementById("geo-weather").innerHTML = "Nearby weather:" + "<br>";
-			document.getElementById("geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "C<br>";
-			document.getElementById("geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "mps<br>";
+			var newParagraph = document.createElement('p');
+			newParagraph.innerHTML += "Nearby weather:" + "<br>";
+			newParagraph.innerHTML += "Temperature: " + (json.main.temp - 273.15) + " °C<br>";
+			newParagraph.innerHTML += "Wind speed: " + json.wind.speed + " m/s<br>";
+			document.getElementById(div).appendChild(newParagraph);
+			getBusStops(lat, lon, div);
 		});
 	};
-	function getbusstops(lat, lon) {
+	function getBusStops(lat, lon, div) {
 		$.getJSON("http://api.smsmybus.com/v1/getnearbystops?key=uwcompsci&lat=" + lat + "&lon=" + lon + "&callback=?", function(json) {
-			for (var i = 0; i < json.stop.length; i++) {
-				var newParagraph = document.createElement('p');
-				newParagraph.innerHTML += "Stop ID: " + json.stop[i].stopID + "<br>" + "Intersection: " + json.stop[i].intersection + "<br>";
-				document.getElementById("updateDiv").appendChild(newParagraph);
+			var newParagraph = document.createElement('p');
+			if (json.stop.length == 0) {
+				newParagraph.innerHTML += "No bus stops available nearby!";
+			} else {
+				newParagraph.innerHTML += json.stop.length + " bus stop(s) available nearby!<br>";
+				for (var i = 0; i < json.stop.length; i++) {
+					newParagraph.innerHTML += "Stop ID: " + json.stop[i].stopID + "<br>" + "Intersection: " + json.stop[i].intersection + "<br>";
+				}
 			}
+			document.getElementById(div).appendChild(newParagraph);
 		});
 	};
-	navigator.geolocation.getCurrentPosition(showMap);
-	var browserlat, browserlon;
-	function showMap(position) {
-		browserlat = position.coords.latitude;
-		browserlon = position.coords.longitude;
-		document.getElementById("browser-geo-lat").innerHTML = "Latitude: " + browserlat + "<br>";
-		document.getElementById("browser-geo-lng").innerHTML = "Longitude: " + browserlon +"<br>";
-		getbrowserweather(browserlat, browserlon);
+	function getDistance(lat, lon, browserlat, browserlon) {
+		var newParagraph = document.createElement('p');
+		if (lat != null && lon != null && browserlat != null && browserlon != null) {
+			var R = 6371;
+			var φ1 = lat * Math.PI / 180;
+			var φ2 = browserlat * Math.PI / 180;
+			var Δφ = (browserlat-lat) * Math.PI / 180;
+			var Δλ = (browserlon-lon) * Math.PI / 180;
+			var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+			Math.cos(φ1) * Math.cos(φ2) *
+			Math.sin(Δλ/2) * Math.sin(Δλ/2);
+			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+			var d = R * c;
+			newParagraph.innerHTML += "Distance: " + d + " km<br>";
+			document.getElementById("updateDistance").appendChild(newParagraph);
+		} else {
+			newParagraph.innerHTML += "N/A<br>";
+			document.getElementById("updateDistance").appendChild(newParagraph);
+		}
 	}
-	function getbrowserweather(browserlat, browserlon) {
-		$.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + browserlat + "&lon=" + browserlon, function(json) {
-			document.getElementById("browser-geo-weather").innerHTML = "Nearby weather:" + "<br>";
-			document.getElementById("browser-geo-temp").innerHTML = "Temperature: " + (json.main.temp - 273.15) + "C<br>";
-			document.getElementById("browser-geo-wind").innerHTML = "Wind speed: " + json.wind.speed + "mps<br>";
-		});
-	};
 	</script>
 	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
-	<br>
-	<p id="geo-weather" style="display:inline"></p>
-	<p id="geo-temp" style="display:inline"></p>
-	<p id="geo-wind" style="display:inline"></p>
-	<div id='updateDiv'></div> 
-	<hr>
-	<p id="browser-geo-lat" style="display:inline"></p>
-	<p id="browser-geo-lng" style="display:inline"></p>
-	<br>
-	<p id="browser-geo-weather" style="display:inline"></p>
-	<p id="browser-geo-temp" style="display:inline"></p>
-	<p id="browser-geo-wind" style="display:inline"></p>
 </body>
 </html>
