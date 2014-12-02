@@ -10,11 +10,7 @@
 	<h1>IP Data</h1>
 	<hr>
 	<div id='updateDiv'></div>
-	<h1>Device Data</h1>
-	<hr>
 	<div id='updateBrowserDiv'></div>
-	<h1>Distance</h1>
-	<hr>
 	<div id='updateDistance'></div>
 	<script type="application/javascript">
 	function getgeoip(json) {
@@ -34,8 +30,13 @@
 			var browserlat = position.coords.latitude;
 			var browserlon = position.coords.longitude;
 			var newParagraph = document.createElement('p');
+			var header = document.createElement('h1');
+			var hr = document.createElement('hr');
+			header.innerHTML += "Device Data";
 			newParagraph.innerHTML += "Latitude: " + browserlat + "<br>";
 			newParagraph.innerHTML += "Longitude: " + browserlon +"<br>";
+			document.getElementById("updateBrowserDiv").appendChild(header);
+			document.getElementById("updateBrowserDiv").appendChild(hr);
 			document.getElementById("updateBrowserDiv").appendChild(newParagraph);
 			getWeather(browserlat, browserlon, "updateBrowserDiv");
 			getDistance(lat, lon, browserlat, browserlon);
@@ -70,6 +71,9 @@
 		});
 	};
 	function getDistance(lat, lon, browserlat, browserlon) {
+		var header = document.createElement('h1');
+		var hr = document.createElement('hr');
+		header.innerHTML += "Distance";
 		var newParagraph = document.createElement('p');
 		if (lat != null && lon != null && browserlat != null && browserlon != null) {
 			var R = 6371;
@@ -83,13 +87,15 @@
 			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 			var d = R * c;
 			newParagraph.innerHTML += "Distance: " + d + " km<br>";
-			document.getElementById("updateDistance").appendChild(newParagraph);
 		} else {
 			newParagraph.innerHTML += "N/A<br>";
-			document.getElementById("updateDistance").appendChild(newParagraph);
 		}
+		document.getElementById("updateDistance").appendChild(header);
+		document.getElementById("updateDistance").appendChild(hr);
+		document.getElementById("updateDistance").appendChild(newParagraph);
 	};
 	</script>
 	<script type="application/javascript" src="http://www.telize.com/geoip?callback=getgeoip"></script>
 </body>
 </html>
+
