@@ -3,37 +3,39 @@
 <head>
 	<meta charset="utf-8">
 	<title>CS 640 Program 4</title>
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 	<link rel="icon" type="image/icon" href="/favicon.ico"/>
 </head>
 <body>
-	<h1>IP Data</h1>
-	<hr>
-	<div id='updateDiv'></div>
-	<div id='updateBrowserDiv'></div>
-	<div id='updateDistance'></div>
-	<div id='updateTime'></div>
+	<div id="updateDiv"></div>
+	<div id="updateBrowserDiv"></div>
+	<div id="updateDistance"></div>
+	<div id="updateTime"></div>
 	<script type="application/javascript">
-	$(document).ready(function() {
-		var start = performance.now();
-		$.getJSON("http://www.telize.com/geoip?callback=?", function(json) {
-			var end = performance.now();
-				var lat = json.latitude;
-				var lon = json.longitude;
-				var newParagraph = document.createElement('p');
-				newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
-				newParagraph.innerHTML += "Latitude: " + lat + "<br>";
-				newParagraph.innerHTML += "Longitude: " + lon + "<br>";
-				newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
-				document.getElementById("updateDiv").appendChild(newParagraph);
-				getWeather(lat, lon, "updateDiv");
-				getBrowserIp(lat, lon);
-			}
-			);
-	});
+	var start = performance.now();
+	$.getJSON("http://www.telize.com/geoip?callback=?", function(json) {
+		var end = performance.now();
+		var lat = json.latitude;
+		var lon = json.longitude;
+		var newParagraph = document.createElement('p');
+		var header = document.createElement('h1');
+		var hr = document.createElement('hr');
+		header.innerHTML += "IP Data";
+		newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
+		newParagraph.innerHTML += "Latitude: " + lat + "<br>";
+		newParagraph.innerHTML += "Longitude: " + lon + "<br>";
+		newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
+		document.getElementById("updateDiv").appendChild(header);
+		document.getElementById("updateDiv").appendChild(hr);
+		document.getElementById("updateDiv").appendChild(newParagraph);
+		getWeather(lat, lon, "updateDiv");
+		getBrowserIp(lat, lon);
+	}
+	);
 	function getBrowserIp(lat, lon) {
-		navigator.geolocation.getCurrentPosition(showMap);
-		function showMap(position) {
+		if (navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(showMap);
+			function showMap(position) {
 			var browserlat = position.coords.latitude;
 			var browserlon = position.coords.longitude;
 			var newParagraph = document.createElement('p');
@@ -48,6 +50,7 @@
 			getWeather(browserlat, browserlon, "updateBrowserDiv");
 			getDistance(lat, lon, browserlat, browserlon);
 		};
+		}
 	};
 	function getWeather(lat, lon, div) {
 		var start = performance.now();
@@ -122,5 +125,6 @@
 		document.getElementById("updateTime").appendChild(newParagraph);
 	};
 	</script>
+</body>
 </html>
 
