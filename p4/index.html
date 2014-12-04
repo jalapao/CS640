@@ -60,7 +60,7 @@ function getBrowserIp(lat, lon) {
 };
 function getWeather(lat, lon, div) {
     var start = performance.now();
-    $.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon, function(json) {
+    $.getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&callback=?", function(json) {
         var end = performance.now();
         var newParagraph = document.createElement('p');
         newParagraph.innerHTML += "Nearby weather:" + "<br>";
