@@ -118,7 +118,6 @@
 		var newParagraph = document.createElement('p');
 		newParagraph.innerHTML += "Page fetch time: " + (performance.timing.responseEnd - performance.timing.fetchStart) + " ms<br>";
 		newParagraph.innerHTML += "Page render time: " + (performance.timing.domComplete - performance.timing.domLoading) + " ms<br>";
-		newParagraph.innerHTML += "Fetch render gap: " + (performance.timing.domLoading - performance.timing.responseEnd) + " ms<br>";
 		newParagraph.innerHTML += "Total time: " + (performance.timing.domComplete - performance.timing.fetchStart) + " ms<br>";
 		document.getElementById("updateTime").appendChild(header);
 		document.getElementById("updateTime").appendChild(hr);
