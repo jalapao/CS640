@@ -12,33 +12,33 @@
     <div id="updateDistance"></div>
     <div id="updateTime"></div>
     <script type="application/javascript">
-        window.onload = function() {
-            getIp();
-            getTime();
-        };
-        function getIp() {
-          var start = performance.now();
-          $.getJSON("http://www.telize.com/geoip?callback=?", function(json) {
-            var end = performance.now();
-            var lat = json.latitude;
-            var lon = json.longitude;
-            var newParagraph = document.createElement('p');
-            var header = document.createElement('h1');
-            var hr = document.createElement('hr');
-            header.innerHTML += "IP Data";
-            newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
-            newParagraph.innerHTML += "Latitude: " + lat + "<br>";
-            newParagraph.innerHTML += "Longitude: " + lon + "<br>";
-            newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
-            document.getElementById("updateDiv").appendChild(header);
-            document.getElementById("updateDiv").appendChild(hr);
-            document.getElementById("updateDiv").appendChild(newParagraph);
-            getWeather(lat, lon, "updateDiv");
-            getBrowserIp(lat, lon);
-        }
-        );
-}
-function getBrowserIp(lat, lon) {
+    window.onload = function() {
+        getIp();
+        getTime();
+    };
+    function getIp() {
+      var start = performance.now();
+      $.getJSON("http://www.telize.com/geoip?callback=?", function(json) {
+        var end = performance.now();
+        var lat = json.latitude;
+        var lon = json.longitude;
+        var newParagraph = document.createElement('p');
+        var header = document.createElement('h1');
+        var hr = document.createElement('hr');
+        header.innerHTML += "IP Data";
+        newParagraph.innerHTML += "Location determined by IP (" + json.ip + ")" + "<br>";
+        newParagraph.innerHTML += "Latitude: " + lat + "<br>";
+        newParagraph.innerHTML += "Longitude: " + lon + "<br>";
+        newParagraph.innerHTML += "API response time: " + (end - start) + " ms<br>";
+        document.getElementById("updateDiv").appendChild(header);
+        document.getElementById("updateDiv").appendChild(hr);
+        document.getElementById("updateDiv").appendChild(newParagraph);
+        getWeather(lat, lon, "updateDiv");
+        getBrowserIp(lat, lon);
+    }
+    );
+  }
+  function getBrowserIp(lat, lon) {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(showMap);
         function showMap(position) {
@@ -49,7 +49,7 @@ function getBrowserIp(lat, lon) {
             var hr = document.createElement('hr');
             header.innerHTML += "Device Data";
             newParagraph.innerHTML += "Latitude: " + browserlat + "<br>";
-            newParagraph.innerHTML += "Longitude: " + browserlon +"<br>";
+            newParagraph.innerHTML += "Longitude: " + browserlon + "<br>";
             document.getElementById("updateBrowserDiv").appendChild(header);
             document.getElementById("updateBrowserDiv").appendChild(hr);
             document.getElementById("updateBrowserDiv").appendChild(newParagraph);
@@ -123,7 +123,8 @@ function getTime() {
     var newParagraph = document.createElement('p');
     newParagraph.innerHTML += "Page fetch time: " + (performance.timing.responseEnd - performance.timing.fetchStart) + " ms<br>";
     newParagraph.innerHTML += "Page render time: " + (performance.timing.domComplete - performance.timing.domLoading) + " ms<br>";
-    newParagraph.innerHTML += "Total time: " + (performance.timing.domComplete - performance.timing.fetchStart) + " ms<br>";
+    newParagraph.innerHTML += "Fetch & render time: " + (performance.timing.domComplete - performance.timing.fetchStart) + " ms<br>";
+    newParagraph.innerHTML += "Fetch & render difference: " + (performance.timing.domLoading - performance.timing.responseEnd) + " ms<br>";
     document.getElementById("updateTime").appendChild(header);
     document.getElementById("updateTime").appendChild(hr);
     document.getElementById("updateTime").appendChild(newParagraph);

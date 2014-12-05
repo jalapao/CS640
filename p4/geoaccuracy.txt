@@ -1,0 +1,12 @@
+On Campus (Wireless at this location)	0.576069279945247 km
+Off Campus (Wireless at this location)	5.04854582406053 km
+On Campus (Cellular)					853.6230072064902 km
+
+1. A:
+On Campus (wireless at this location).
+The device geolocation data acquired from web browser (Using chrome in this experiment) is based on GPS or Google location service database, which is usually quite accurate. 
+The on campus experiment is conducted in CS lab with wireless network COMPSCI-5GHZ. My IP address here is 128.105.32.221. The registered address of this IP is 1210 W Dayton St Rm 2350, very close to my real geolocation. Therefore this location has the lowest error.
+
+2. A:
+On Campus (Cellular).
+The ip address in a cellular network is allocated by the packet data network gateway. There is usually one P-GW per region, so the registered address of this IP could be very far away from the accurate geolocation.  

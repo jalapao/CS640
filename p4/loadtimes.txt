@@ -1,0 +1,88 @@
+API response time:
+
+On Campus (Wireless at this location):
+1. Get geolocation from IP address: 			249.50500001432374 ms
+2. Get weather using IP based geolocation:		1028.7890000035986 ms
+3. Get bus info using IP based geolocation:		1654.845999990357 ms
+4. Get weather using W3C API geolocation:		543.8460000150371 ms
+5. Get bus info using W3C API geolocation:		2604.6219999843743 ms
+Page fetch time: 11 ms
+Page render time: 215 ms
+Fetch & render time: 227 ms
+
+Off Campus (Wireless at this location):
+1. Get geolocation from IP address: 			246.99999999938882 ms
+2. Get weather using IP based geolocation:		383.99999999819556 ms
+3. Get bus info using IP based geolocation:		2230.999999999767 ms
+4. Get weather using W3C API geolocation:		271.0000000006403 ms
+5. Get bus info using W3C API geolocation:		727.999999999156 ms
+Page fetch time: 8 ms
+Page render time: 225 ms
+Fetch & render time: 239 ms
+
+On Campus (Cellular):
+1. Get geolocation from IP address: 			414.2229999997653 ms
+2. Get weather using IP based geolocation:		303.6229999852367 ms
+3. Get bus info using IP based geolocation:		2051.303000014741 ms
+4. Get weather using W3C API geolocation:		289.04200001852587 ms
+5. Get bus info using W3C API geolocation:		1499.1259999806061 ms
+Page fetch time: 274 ms
+Page render time: 66 ms
+Fetch & render time: 349 ms
+
+
+1. A:
+REST API call with longest complete:
+On Campus wireless: Get bus info using W3C API geolocation (SMSMyBus API)
+On Campus cellular: Get bus info using IP based geolocation (SMSMyBus API)
+Off Campus wireless: Get bus info using IP based geolocation (SMSMyBus API)
+
+Yes, the answer is the same for all location/connectivity combinations.
+
+Yes, the delay is primarily determined by the remote service. For different location/connectivity combinations, the browser we used and the last-mile connection is different each time, yet it is the same API call takeing longest complete. Therefore the delay should be primarily determined by the remote service.
+
+
+2. A:
+Time taken for each REST API call:
+Telize (get geolocation from IP):
+On Campus (Wireless at this location):			249.50500001432374 ms
+Off Campus (Wireless at this location):			246.99999999938882 ms
+On Campus (Cellular):							414.2229999997653 ms
+Fastest: Off Campus (Wireless at this location).
+Slowest: On Campus (Cellular).
+
+OpenWeatherMap (get weather of a location):
+On Campus (Wireless at this location) using IP based geolocation:		1028.7890000035986 ms
+On Campus (Wireless at this location) using W3C API geolocation:		543.8460000150371 ms
+Off Campus (Wireless at this location) using IP based geolocation:		383.99999999819556 ms
+Off Campus (Wireless at this location) using W3C API geolocation:		271.0000000006403 ms
+On Campus (Cellular) using IP based geolocation:						303.6229999852367 ms
+On Campus (Cellular) using W3C API geolocation: 						289.04200001852587 ms
+Fastest: Off Campus (Wireless at this location) using W3C API geolocation.
+Slowest: On Campus (Wireless at this location) using IP based geolocation.
+
+SMSMyBus (get bus info of a location):
+On Campus (Wireless at this location) using IP based geolocation:		1654.845999990357 ms
+On Campus (Wireless at this location) using W3C API geolocation:		2604.6219999843743 ms
+Off Campus (Wireless at this location) using IP based geolocation:		2230.999999999767 ms
+Off Campus (Wireless at this location) using W3C API geolocation:		727.999999999156 ms
+On Campus (Cellular) using IP based geolocation:						2051.303000014741 ms
+On Campus (Cellular) using W3C API geolocation: 						1499.1259999806061 ms
+Fastest: Off Campus (Wireless at this location) using W3C API geolocation.
+Slowest: On Campus (Wireless at this location) using W3C API geolocation.
+
+Possible network explanations: 
+1. Off campus networks may be more costly, and provide larger bandwith and faster transmit speed.
+2. On campus networks might have a firewall, which takes more time to process data in the network.
+3. On campus networks could be heavily loaded at the time we did the experiment.  
+
+
+3. A: 
+No.
+According to the W3C standard, domLoading starts immediately after the document object is created, so there is a time gap between responseEnd and domLoading to preprocess the received text and create document object.
+
+
+
+
+
+
